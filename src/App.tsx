@@ -1,0 +1,449 @@
+import './styles/dashboard.css';
+import { useEffect, useState, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseClient';
+import AuthModal from './components/AuthModal';
+import TaskModal from './components/TaskModal';
+import type { Task } from './types/task';
+import {
+  LogOut,
+  Loader2,
+  Plus,
+  CheckCircle2,
+  SlidersHorizontal,
+  Clock,
+  GraduationCap,
+  Trash2,
+  RotateCcw,
+  Check
+} from 'lucide-react';
+
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewCompletedOnly, setViewCompletedOnly] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchTasks = useCallback(async () => {
+    if (!session?.user) return;
+    setLoadingTasks(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTasks(data || []);
+    } catch (err) {
+      console.error('Erro ao buscar tarefas:', err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      fetchTasks();
+    }
+  }, [session, fetchTasks]);
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      if (error) throw error;
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (err) {
+      console.error('Erro ao deletar tarefa:', err);
+    }
+  };
+
+  const handleToggleComplete = async (task: Task) => {
+    const isCompleted = task.status === 'completed';
+    const newStatus = isCompleted ? 'todo' : 'completed';
+    const completedAt = isCompleted ? null : new Date().toISOString();
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: newStatus,
+          completed_at: completedAt,
+        })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, status: newStatus, completed_at: completedAt } : t
+        )
+      );
+    } catch (err) {
+      console.error('Erro ao alterar status da tarefa:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthModal />;
+  }
+
+  // Métricas
+  const totalTasks = tasks.length;
+  const userSupportTasks = tasks.filter(
+    (t) => t.category === 'user_support' && t.status !== 'completed'
+  );
+  const systemUpdateTasks = tasks.filter(
+    (t) => t.category === 'system_update' && t.status !== 'completed'
+  );
+  const completedTasks = tasks.filter((t) => t.status === 'completed');
+
+  const getCardColorClass = (task: Task, index: number) => {
+    if (task.card_color) return task.card_color;
+    if (task.priority === 'high') return 'yellow';
+    if (task.priority === 'low') return 'green';
+    const palette = ['blue', 'purple', 'yellow'];
+    return palette[index % palette.length];
+  };
+
+  return (
+    <div className="dashboard-page">
+      {/* Cabeçalho */}
+      <header className="dash-header">
+        <div className="dash-header-brand">
+          <div className="dash-logo-badge">
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>Fluxo</span>
+          </div>
+          <div className="dash-brand-info">
+            <h1>Operação Interna</h1>
+            <p>Triagem de chamados e manutenções programadas</p>
+          </div>
+        </div>
+
+        <div className="dash-header-actions">
+          <button
+            onClick={() => setViewCompletedOnly(!viewCompletedOnly)}
+            className={`btn-concluidas ${viewCompletedOnly ? 'bg-slate-200' : ''}`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{viewCompletedOnly ? 'Ver Todas' : 'Concluídas'}</span>
+          </button>
+
+          <button onClick={() => setIsModalOpen(true)} className="btn-nova-tarefa">
+            <Plus className="w-4 h-4" />
+            <span>Nova tarefa</span>
+          </button>
+
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="user-avatar-btn"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* Conteúdo Principal */}
+      <main className="dash-content">
+        <h2 className="dash-page-title">Quadro de tarefas</h2>
+        <p className="dash-page-subtitle">
+          Visualize e gerencie todos os chamados e demandas criadas pela equipe, sem distinção de etapas.
+        </p>
+
+        {/* Métricas */}
+        <div className="metrics-grid">
+          <div className="metric-card">
+            <div>
+              <div className="metric-card-label">TAREFAS CRIADAS</div>
+              <div className="metric-card-value">
+                <span className="number">{totalTasks}</span>
+                <span className="text">no total</span>
+              </div>
+            </div>
+            <div className="metric-icon-box">
+              <SlidersHorizontal className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div>
+              <div className="metric-card-label">
+                <span className="dot dot-blue"></span> ATENDIMENTO AO USUÁRIO
+              </div>
+              <div className="metric-card-value">
+                <span className="number">{userSupportTasks.length}</span>
+                <span className="text">chamados ativos</span>
+              </div>
+            </div>
+            <div className="metric-icon-box blue">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div>
+              <div className="metric-card-label">
+                <span className="dot dot-purple"></span> DEMANDA SIGUESCOLA
+              </div>
+              <div className="metric-card-value">
+                <span className="number">{systemUpdateTasks.length}</span>
+                <span className="text">demandas cadastradas</span>
+              </div>
+            </div>
+            <div className="metric-icon-box purple">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Quadro Kanban */}
+        {loadingTasks ? (
+          <div className="flex justify-center items-center h-48">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : viewCompletedOnly ? (
+          <div className="kanban-column">
+            <div className="column-banner completed">
+              <div className="column-banner-title">
+                <CheckCircle2 className="w-5 h-5" />
+                <div>
+                  <h3>Tarefas Concluídas</h3>
+                  <p>Histórico de demandas já finalizadas</p>
+                </div>
+              </div>
+              <span className="badge-count">{completedTasks.length} tarefas</span>
+            </div>
+
+            <div className="task-list">
+              {completedTasks.length === 0 ? (
+                <div className="empty-task-state">Nenhuma tarefa concluída.</div>
+              ) : (
+                completedTasks.map((task) => (
+                  <div key={task.id} className="task-card green opacity-85">
+                    <div className="task-card-header">
+                      <span className="task-tag">Concluído</span>
+                      <div className="task-card-header-actions">
+                        <button
+                          onClick={() => handleToggleComplete(task)}
+                          className="task-action-icon"
+                          title="Reabrir tarefa"
+                        >
+                          <RotateCcw className="w-4 h-4 text-blue-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="task-action-icon"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <h4 className="task-card-title line-through">{task.title}</h4>
+                    {task.description && <p className="task-card-desc">{task.description}</p>}
+
+                    <div className="task-card-footer">
+                      <span className="task-author">Finalizado</span>
+                      <span className="task-author">{task.created_by_name || 'usuario'}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="kanban-grid">
+            {/* QUADRO 1: Atendimento ao usuário */}
+            <div className="kanban-column">
+              <div className="column-banner suporte">
+                <div className="column-banner-title">
+                  <Clock className="w-5 h-5" />
+                  <div>
+                    <h3>Atendimento ao usuário</h3>
+                    <p>Suporte técnico aos operadores</p>
+                  </div>
+                </div>
+                <div className="column-banner-actions">
+                  <span className="badge-count">{userSupportTasks.length} tarefas</span>
+                  <button onClick={() => setIsModalOpen(true)} className="btn-add-column">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="task-list">
+                {userSupportTasks.length === 0 ? (
+                  <div className="empty-task-state">Nenhum chamado ativo no momento.</div>
+                ) : (
+                  userSupportTasks.map((task, idx) => {
+                    const colorClass = getCardColorClass(task, idx);
+                    return (
+                      <div key={task.id} className={`task-card ${colorClass}`}>
+                        <div className="task-card-header">
+                          <span className="task-tag">Chamado #{task.id.substring(0, 4)}</span>
+                          <div className="task-card-header-actions">
+                            <button
+                              onClick={() => handleToggleComplete(task)}
+                              className="btn-concluir-card"
+                              title="Marcar como concluído"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Concluir</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="task-action-icon"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <h4 className="task-card-title">{task.title}</h4>
+                        {task.description && <p className="task-card-desc">{task.description}</p>}
+
+                        <div className="task-card-footer">
+                          <span
+                            className={`priority-pill ${
+                              task.priority === 'high'
+                                ? 'high'
+                                : task.priority === 'low'
+                                ? 'low'
+                                : 'medium'
+                            }`}
+                          >
+                            {task.priority === 'high'
+                              ? 'Alta prioridade'
+                              : task.priority === 'low'
+                              ? 'Baixa prioridade'
+                              : 'Média prioridade'}
+                          </span>
+                          <span className="task-author">{task.created_by_name || 'usuario'}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* QUADRO 2: Demanda Siguescola */}
+            <div className="kanban-column">
+              <div className="column-banner siguescola">
+                <div className="column-banner-title">
+                  <GraduationCap className="w-5 h-5" />
+                  <div>
+                    <h3>Demanda Siguescola</h3>
+                    <p>Banco de dados e gestão acadêmica</p>
+                  </div>
+                </div>
+                <div className="column-banner-actions">
+                  <span className="badge-count">{systemUpdateTasks.length} tarefas</span>
+                  <button onClick={() => setIsModalOpen(true)} className="btn-add-column">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="task-list">
+                {systemUpdateTasks.length === 0 ? (
+                  <div className="empty-task-state">Nenhuma demanda cadastrada no momento.</div>
+                ) : (
+                  systemUpdateTasks.map((task, idx) => {
+                    const colorClass = getCardColorClass(task, idx + 1);
+                    return (
+                      <div key={task.id} className={`task-card ${colorClass}`}>
+                        <div className="task-card-header">
+                          <span className="task-tag">
+                            {task.category === 'system_update' ? 'Siguescola' : 'Interface'}
+                          </span>
+                          <div className="task-card-header-actions">
+                            <button
+                              onClick={() => handleToggleComplete(task)}
+                              className="btn-concluir-card"
+                              title="Marcar como concluído"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Concluir</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="task-action-icon"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <h4 className="task-card-title">{task.title}</h4>
+                        {task.description && <p className="task-card-desc">{task.description}</p>}
+
+                        <div className="task-card-footer">
+                          <span
+                            className={`priority-pill ${
+                              task.priority === 'high'
+                                ? 'high'
+                                : task.priority === 'low'
+                                ? 'low'
+                                : 'medium'
+                            }`}
+                          >
+                            {task.priority === 'high'
+                              ? 'Alta prioridade'
+                              : task.priority === 'low'
+                              ? 'Baixa prioridade'
+                              : 'Média prioridade'}
+                          </span>
+                          <span className="task-author">{task.created_by_name || 'usuario'}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Modal para criar tarefas */}
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onTaskCreated={fetchTasks}
+      />
+    </div>
+  );
+}

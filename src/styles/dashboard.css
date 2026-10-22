@@ -1,0 +1,701 @@
+/* Layout Principal e Fundo */
+.dashboard-page {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f7f9fc !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* Header Superior (Navbar) */
+.dash-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.875rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dash-logo-badge {
+  background-color: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dash-brand-info h1 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.dash-brand-info p {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.dash-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-concluidas {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-concluidas:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-nova-tarefa {
+  background-color: #1e293b;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1.125rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-nova-tarefa:hover {
+  background-color: #0f172a;
+}
+
+.user-avatar-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-avatar-btn:hover {
+  background-color: #cbd5e1;
+}
+
+/* Área de Conteúdo Principal */
+.dash-content {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Título e Subtítulo */
+.dash-page-title {
+  font-size: 1.625rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.375rem 0;
+}
+
+.dash-page-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 1.75rem 0;
+}
+
+/* Cards de Métricas (Métricas Superiores) */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.metric-card-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-card-label .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-blue { background-color: #3b82f6; }
+.dot-purple { background-color: #8b5cf6; }
+
+.metric-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.metric-card-value .number {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.metric-card-value .text {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.metric-icon-box {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.metric-icon-box.blue {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.metric-icon-box.purple {
+  background-color: #f5f3ff;
+  color: #8b5cf6;
+}
+
+/* Grid das Colunas Kanban (2 Quadros) */
+.kanban-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.kanban-column {
+  background-color: #ffffff;
+  border-radius: 1.25rem;
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Banner de Cabeçalho da Coluna */
+.column-banner {
+  border-radius: 0.875rem;
+  padding: 0.875rem 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.column-banner.suporte {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.column-banner.siguescola {
+  background-color: #2e3785;
+  color: #ffffff;
+}
+
+.column-banner.completed {
+  background-color: #dcfce7;
+  color: #14532d;
+}
+
+.column-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.column-banner-title h3 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.column-banner-title p {
+  font-size: 0.75rem;
+  margin: 0.125rem 0 0 0;
+  opacity: 0.8;
+}
+
+.column-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.badge-count {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.column-banner.siguescola .badge-count {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.btn-add-column {
+  background-color: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #1e293b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: opacity 0.2s;
+}
+
+.column-banner.siguescola .btn-add-column {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.btn-add-column:hover {
+  opacity: 0.85;
+}
+
+/* Lista de Cards de Tarefas */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.empty-task-state {
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 0.875rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+/* Cards Individuais de Tarefa */
+.task-card {
+  border-radius: 0.875rem;
+  padding: 1.125rem;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Variações de Cores dos Cards (Estilo da Imagem) */
+.task-card.yellow {
+  background-color: #fefce8;
+  border-color: #fef08a;
+}
+.task-card.green {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.task-card.red {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+.task-card.blue {
+  background-color: #f0f9ff;
+  border-color: #bae6fd;
+}
+.task-card.purple {
+  background-color: #faf5ff;
+  border-color: #e9d5ff;
+}
+
+/* Tag Superior no Card */
+.task-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.5rem;
+  width: fit-content;
+}
+
+.task-card.yellow .task-tag { background-color: #fef08a; color: #854d0e; }
+.task-card.green .task-tag { background-color: #bbf7d0; color: #166534; }
+.task-card.red .task-tag { background-color: #fecaca; color: #991b1b; }
+.task-card.blue .task-tag { background-color: #bae6fd; color: #075985; }
+.task-card.purple .task-tag { background-color: #e9d5ff; color: #6b21a8; }
+
+.task-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.task-action-icon {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  transition: color 0.15s;
+}
+
+.task-action-icon:hover {
+  color: #0f172a;
+}
+
+.task-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.task-card-desc {
+  font-size: 0.8125rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Rodapé do Card (Prioridade, Autor e Ações) */
+.task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.priority-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+.priority-pill.high { background-color: #ffe4e6; color: #e11d48; }
+.priority-pill.medium { background-color: #e0f2fe; color: #0284c7; }
+.priority-pill.low { background-color: #dcfce7; color: #16a34a; }
+
+.task-author {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.btn-concluir-card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: font-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+}
+
+.btn-concluir-card:hover {
+  background-color: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .metrics-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .kanban-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+
+/* ==========================================
+   MODAL DE CRIAÇÃO DE TAREFAS (ESTILO GLASS)
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 28rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: scaleUp 0.2s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-close-modal:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Formulário do Modal */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.modal-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.125rem;
+}
+
+.modal-input,
+.modal-select,
+.modal-textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.modal-input:focus,
+.modal-select:focus,
+.modal-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.modal-textarea {
+  resize: none;
+}
+
+/* Seletor de Cores do Card */
+.color-picker-grid {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.color-option {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  transform: scale(1.15);
+  border-color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.color-option.yellow { background-color: #fef08a; }
+.color-option.green { background-color: #bbf7d0; }
+.color-option.red { background-color: #fecaca; }
+.color-option.blue { background-color: #bae6fd; }
+.color-option.purple { background-color: #e9d5ff; }
+
+/* Rodapé de Ações */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-modal-cancel {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.625rem 1rem;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.btn-modal-submit {
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: background-color 0.2s ease;
+}
+
+.btn-modal-submit:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+.btn-modal-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
