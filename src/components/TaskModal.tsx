@@ -231,7 +231,6 @@ export default function TaskModal({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
                   <span>Criar Tarefa</span>
                 </>
               )}
