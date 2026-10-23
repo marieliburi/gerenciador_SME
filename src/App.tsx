@@ -8,6 +8,8 @@ import type { Task } from './types/task';
 import MeetingTopicsView from './components/meetingTopicView';
 import MeetingTopicModal from './components/meetingTopicModel';
 import type { MeetingTopic } from './types/meetingTopic';
+import NotesView from './components/NotesView';
+import { StickyNote } from 'lucide-react';
 import {
   MessageSquare,
   LogOut,
@@ -35,9 +37,8 @@ export default function App() {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
-  // Navegação de Telas: 'kanban' | 'meeting_topics' | 'completed'
-  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'completed'>('kanban');
-
+  // Navegação de Telas: 'kanban' | 'meeting_topics' | 'completed' | 'notes'
+  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'completed' | 'notes'>('kanban');
   // Estado das Pautas
   const [isMeetingTopicModalOpen, setIsMeetingTopicModalOpen] = useState(false);
   const [topicToEdit, setTopicToEdit] = useState<MeetingTopic | null>(null);
@@ -226,6 +227,14 @@ export default function App() {
               </button>
 
               <button
+                onClick={() => setActiveNav('notes')}
+                className={`nav-link ${activeNav === 'notes' ? 'active-black' : ''}`}
+              >
+                <StickyNote className="w-4 h-4" />
+                <span>Notas</span>
+              </button>
+
+              <button
                 onClick={() => setActiveNav('completed')}
                 className={`nav-link ${activeNav === 'completed' ? 'active-black' : ''}`}
               >
@@ -262,7 +271,10 @@ export default function App() {
           />
         )}
 
-        {/* VIEW 2: TAREFAS CONCLUÍDAS */}
+        {/* VIEW 2: MURAL DE NOTAS (INCLUÍDO AQUI) */}
+        {activeNav === 'notes' && <NotesView />}
+
+        {/* VIEW 3: TAREFAS CONCLUÍDAS */}
         {activeNav === 'completed' && (
           <div className="kanban-column">
             <div className="column-banner completed">
@@ -316,7 +328,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 3: QUADRO KANBAN PRINCIPAL */}
+        {/* VIEW 4: QUADRO KANBAN PRINCIPAL */}
         {activeNav === 'kanban' && (
           <>
             <h2 className="dash-page-title">Quadro de tarefas</h2>
