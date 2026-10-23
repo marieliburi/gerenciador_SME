@@ -1,22 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { TaskCategory, TaskPriority } from '../types/task';
-import { X, Plus, Loader2 } from 'lucide-react';
+import type { Task, TaskCategory, TaskPriority } from '../types/task';
+import { X, Plus, Save, Loader2 } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskCreated: () => void;
+  taskToEdit?: Task | null; // Tarefa enviada para edição (opcional)
 }
 
-export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalProps) {
+export default function TaskModal({
+  isOpen,
+  onClose,
+  onTaskCreated,
+  taskToEdit,
+}: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TaskCategory>('user_support');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [cardColor, setCardColor] = useState<string>('yellow');
+  const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (taskToEdit) {
+      setTitle(taskToEdit.title || '');
+      setDescription(taskToEdit.description || '');
+      setCategory(taskToEdit.category || 'user_support');
+      setPriority(taskToEdit.priority || 'medium');
+      setCardColor(taskToEdit.card_color || 'yellow');
+
+      // Formata a data ISO para YYYY-MM-DDTHH:mm para o input datetime-local
+      if (taskToEdit.due_date) {
+        const d = new Date(taskToEdit.due_date);
+        const pad = (num: number) => String(num).padStart(2, '0');
+        const formattedDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+          d.getDate()
+        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        setDueDate(formattedDate);
+      } else {
+        setDueDate('');
+      }
+    } else {
+      // Reseta para novo registro
+      setTitle('');
+      setDescription('');
+      setCategory('user_support');
+      setPriority('medium');
+      setCardColor('yellow');
+      setDueDate('');
+    }
+  }, [taskToEdit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -28,41 +65,56 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
     setErrorMsg(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
         throw new Error('Usuário não autenticado.');
       }
 
-      // Extrai o nome do criador a partir do e-mail (ex: "clara.dias" de "clara.dias@email.com")
       const authorName = user.email ? user.email.split('@')[0] : 'usuario';
+      const finalDueDate =
+        category === 'system_update' && dueDate ? new Date(dueDate).toISOString() : null;
 
-      const { error } = await supabase.from('tasks').insert([
-        {
-          title: title.trim(),
-          description: description.trim() || null,
-          category,
-          status: 'todo',
-          priority,
-          card_color: cardColor,
-          created_by: user.id,
-          created_by_name: authorName, // Salva o nome do criador da tarefa
-        },
-      ]);
+      if (taskToEdit) {
+        // ATUALIZAR TAREFA EXISTENTE
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            category,
+            priority,
+            card_color: cardColor,
+            due_date: finalDueDate,
+          })
+          .eq('id', taskToEdit.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // CRIAR NOVA TAREFA
+        const { error } = await supabase.from('tasks').insert([
+          {
+            title: title.trim(),
+            description: description.trim() || null,
+            category,
+            status: 'todo',
+            priority,
+            card_color: cardColor,
+            created_by: user.id,
+            created_by_name: authorName,
+            due_date: finalDueDate,
+          },
+        ]);
 
-      // Reseta os campos do formulário
-      setTitle('');
-      setDescription('');
-      setCategory('user_support');
-      setPriority('medium');
-      setCardColor('yellow');
-      
+        if (error) throw error;
+      }
+
       onTaskCreated();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao criar a tarefa no banco de dados.');
+      setErrorMsg(err.message || 'Erro ao salvar a tarefa no banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -71,23 +123,19 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        
-        {/* Cabeçalho do Modal */}
         <div className="modal-header">
-          <h3>Criar Nova Tarefa</h3>
+          <h3>{taskToEdit ? 'Editar Tarefa' : 'Criar Nova Tarefa'}</h3>
           <button type="button" onClick={onClose} className="btn-close-modal">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Alerta de Erro se houver */}
         {errorMsg && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium">
             {errorMsg}
           </div>
         )}
 
-        {/* Formulário */}
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="modal-field">
             <label className="modal-label">Título da Tarefa *</label>
@@ -102,7 +150,7 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
           </div>
 
           <div className="modal-field">
-            <label className="modal-label">Descrição (Opcional)</label>
+            <label className="modal-label">Descrição</label>
             <textarea
               rows={3}
               value={description}
@@ -139,7 +187,18 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
             </div>
           </div>
 
-          {/* Escolha da Cor Pastel do Card */}
+          {category === 'system_update' && (
+            <div className="modal-field">
+              <label className="modal-label">Prazo / Agendamento (Calendário)</label>
+              <input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="modal-input"
+              />
+            </div>
+          )}
+
           <div className="modal-field">
             <label className="modal-label">Cor do Card</label>
             <div className="color-picker-grid">
@@ -155,7 +214,6 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
             </div>
           </div>
 
-          {/* Rodapé de Ações */}
           <div className="modal-footer">
             <button type="button" onClick={onClose} className="btn-modal-cancel">
               Cancelar
@@ -165,6 +223,11 @@ export default function TaskModal({ isOpen, onClose, onTaskCreated }: TaskModalP
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Salvando...</span>
+                </>
+              ) : taskToEdit ? (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Salvar Alterações</span>
                 </>
               ) : (
                 <>

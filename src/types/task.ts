@@ -16,6 +16,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   completed_at?: string | null;
+  due_date?: string | null;
 }
 
 export type CreateTaskDTO = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed_at' | 'created_by'>;

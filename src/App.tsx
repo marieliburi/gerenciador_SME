@@ -15,7 +15,9 @@ import {
   GraduationCap,
   Trash2,
   RotateCcw,
-  Check
+  Check,
+  Calendar,
+  Pencil
 } from 'lucide-react';
 
 export default function App() {
@@ -24,7 +26,9 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [viewCompletedOnly, setViewCompletedOnly] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -66,6 +70,8 @@ export default function App() {
   }, [session, fetchTasks]);
 
   const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+
     try {
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) throw error;
@@ -77,6 +83,12 @@ export default function App() {
 
   const handleToggleComplete = async (task: Task) => {
     const isCompleted = task.status === 'completed';
+    const message = isCompleted
+      ? 'Deseja reabrir esta tarefa?'
+      : 'Tem certeza que deseja concluir esta tarefa?';
+
+    if (!confirm(message)) return;
+
     const newStatus = isCompleted ? 'todo' : 'completed';
     const completedAt = isCompleted ? null : new Date().toISOString();
 
@@ -101,6 +113,43 @@ export default function App() {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setTaskToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (task: Task) => {
+    setTaskToEdit(task);
+    setIsModalOpen(true);
+  };
+
+  const getDaysRemainingText = (dueDateString?: string | null) => {
+    if (!dueDateString) return null;
+    
+    const dueDate = new Date(dueDateString);
+    const today = new Date();
+    
+    dueDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { text: `Atrasado há ${Math.abs(diffDays)} dia(s)`, isLate: true };
+    } else if (diffDays === 0) {
+      return { text: 'Vence hoje!', isLate: false };
+    } else if (diffDays === 1) {
+      return { text: 'Vence amanhã', isLate: false };
+    } else {
+      return { text: `Faltam ${diffDays} dias`, isLate: false };
+    }
+  };
+
+  const toggleCardExpansion = (taskId: string) => {
+    setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-100">
@@ -113,7 +162,6 @@ export default function App() {
     return <AuthModal />;
   }
 
-  // Métricas
   const totalTasks = tasks.length;
   const userSupportTasks = tasks.filter(
     (t) => t.category === 'user_support' && t.status !== 'completed'
@@ -133,18 +181,8 @@ export default function App() {
 
   return (
     <div className="dashboard-page">
-      {/* Cabeçalho */}
       <header className="dash-header">
-        <div className="dash-header-brand">
-          <div className="dash-logo-badge">
-            <SlidersHorizontal className="w-4 h-4" />
-            <span>Fluxo</span>
-          </div>
-          <div className="dash-brand-info">
-            <h1>Operação Interna</h1>
-            <p>Triagem de chamados e manutenções programadas</p>
-          </div>
-        </div>
+        <div className="dash-header-brand"></div>
 
         <div className="dash-header-actions">
           <button
@@ -155,7 +193,7 @@ export default function App() {
             <span>{viewCompletedOnly ? 'Ver Todas' : 'Concluídas'}</span>
           </button>
 
-          <button onClick={() => setIsModalOpen(true)} className="btn-nova-tarefa">
+          <button onClick={handleOpenCreateModal} className="btn-nova-tarefa">
             <Plus className="w-4 h-4" />
             <span>Nova tarefa</span>
           </button>
@@ -170,14 +208,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="dash-content">
         <h2 className="dash-page-title">Quadro de tarefas</h2>
-        <p className="dash-page-subtitle">
-          Visualize e gerencie todos os chamados e demandas criadas pela equipe, sem distinção de etapas.
-        </p>
-
-        {/* Métricas */}
+        
         <div className="metrics-grid">
           <div className="metric-card">
             <div>
@@ -223,7 +256,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Quadro Kanban */}
         {loadingTasks ? (
           <div className="flex justify-center items-center h-48">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -293,7 +325,7 @@ export default function App() {
                 </div>
                 <div className="column-banner-actions">
                   <span className="badge-count">{userSupportTasks.length} tarefas</span>
-                  <button onClick={() => setIsModalOpen(true)} className="btn-add-column">
+                  <button onClick={handleOpenCreateModal} className="btn-add-column">
                     <Plus className="w-3.5 h-3.5" />
                     <span>Adicionar</span>
                   </button>
@@ -306,18 +338,33 @@ export default function App() {
                 ) : (
                   userSupportTasks.map((task, idx) => {
                     const colorClass = getCardColorClass(task, idx);
+                    const isExpanded = expandedTaskId === task.id;
+
                     return (
-                      <div key={task.id} className={`task-card ${colorClass}`}>
+                      <div
+                        key={task.id}
+                        onClick={() => toggleCardExpansion(task.id)}
+                        className={`task-card ${colorClass} ${isExpanded ? 'expanded' : ''}`}
+                      >
                         <div className="task-card-header">
                           <span className="task-tag">Chamado #{task.id.substring(0, 4)}</span>
-                          <div className="task-card-header-actions">
+                          <div
+                            className="task-card-header-actions"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => handleOpenEditModal(task)}
+                              className="task-action-icon"
+                              title="Editar tarefa"
+                            >
+                              <Pencil className="w-4 h-4 text-slate-600 hover:text-slate-900" />
+                            </button>
                             <button
                               onClick={() => handleToggleComplete(task)}
-                              className="btn-concluir-card"
-                              title="Marcar como concluído"
+                              className="task-action-icon"
+                              title="Concluir tarefa"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Concluir</span>
+                              <Check className="w-4 h-4 text-emerald-600 hover:text-emerald-800" />
                             </button>
                             <button
                               onClick={() => handleDeleteTask(task.id)}
@@ -369,7 +416,7 @@ export default function App() {
                 </div>
                 <div className="column-banner-actions">
                   <span className="badge-count">{systemUpdateTasks.length} tarefas</span>
-                  <button onClick={() => setIsModalOpen(true)} className="btn-add-column">
+                  <button onClick={handleOpenCreateModal} className="btn-add-column">
                     <Plus className="w-3.5 h-3.5" />
                     <span>Adicionar</span>
                   </button>
@@ -382,20 +429,36 @@ export default function App() {
                 ) : (
                   systemUpdateTasks.map((task, idx) => {
                     const colorClass = getCardColorClass(task, idx + 1);
+                    const isExpanded = expandedTaskId === task.id;
+                    const daysInfo = getDaysRemainingText(task.due_date);
+
                     return (
-                      <div key={task.id} className={`task-card ${colorClass}`}>
+                      <div
+                        key={task.id}
+                        onClick={() => toggleCardExpansion(task.id)}
+                        className={`task-card ${colorClass} ${isExpanded ? 'expanded' : ''}`}
+                      >
                         <div className="task-card-header">
                           <span className="task-tag">
                             {task.category === 'system_update' ? 'Siguescola' : 'Interface'}
                           </span>
-                          <div className="task-card-header-actions">
+                          <div
+                            className="task-card-header-actions"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => handleOpenEditModal(task)}
+                              className="task-action-icon"
+                              title="Editar tarefa"
+                            >
+                              <Pencil className="w-4 h-4 text-slate-600 hover:text-slate-900" />
+                            </button>
                             <button
                               onClick={() => handleToggleComplete(task)}
-                              className="btn-concluir-card"
-                              title="Marcar como concluído"
+                              className="task-action-icon"
+                              title="Concluir tarefa"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Concluir</span>
+                              <Check className="w-4 h-4 text-emerald-600 hover:text-emerald-800" />
                             </button>
                             <button
                               onClick={() => handleDeleteTask(task.id)}
@@ -409,6 +472,42 @@ export default function App() {
 
                         <h4 className="task-card-title">{task.title}</h4>
                         {task.description && <p className="task-card-desc">{task.description}</p>}
+
+                        {/* EXIBIÇÃO DE PRAZO CONDICIONAL */}
+                        {isExpanded && task.category === 'system_update' && (
+                          <div className="task-card-expanded-details">
+                            {task.due_date ? (
+                              <div className="due-date-box">
+                                <div className="due-date-info">
+                                  <Calendar className="w-4 h-4 text-slate-500" />
+                                  <span>
+                                    Prazo:{' '}
+                                    {new Date(task.due_date).toLocaleDateString('pt-BR', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                </div>
+                                {daysInfo && (
+                                  <span
+                                    className={`days-badge ${
+                                      daysInfo.isLate ? 'late' : ''
+                                    }`}
+                                  >
+                                    {daysInfo.text}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="due-date-box empty">
+                                <span>Sem prazo de agendamento definido</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <div className="task-card-footer">
                           <span
@@ -438,11 +537,14 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal para criar tarefas */}
       <TaskModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setTaskToEdit(null);
+        }}
         onTaskCreated={fetchTasks}
+        taskToEdit={taskToEdit}
       />
     </div>
   );
