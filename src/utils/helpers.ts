@@ -1,5 +1,5 @@
-import type { CardColor, TaskCategory, TaskPriority } from '@/types';
-import { CARD_COLORS } from '@/types';
+import type { CardColor, TaskCategory, TaskPriority } from '../types';
+import { CARD_COLORS } from '../types';
 
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr);

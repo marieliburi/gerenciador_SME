@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { MeetingTopic, MeetingTopicStatus } from '../types/meetingTopic';
 import '../styles/meeting.css';

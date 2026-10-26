@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
-import type { Task, TaskFormData, TaskStatus } from '@/types';
-import * as taskService from '@/features/tasks/taskService';
+import type { Task, TaskStatus } from '../types/task';
+import type { TaskFormData } from '../types';
+import { taskService } from '../services/taskService';
 
 export function useTasks(statuses: TaskStatus[]) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -13,10 +14,24 @@ export function useTasks(statuses: TaskStatus[]) {
     try {
       setLoading(true);
       setError(null);
-      const data = await taskService.fetchTasks(statuses);
-      setTasks(data);
+
+      const [activeTasks, completedTasks] = await Promise.all([
+        taskService.getActiveTasks(),
+        taskService.getCompletedTasks(),
+      ]);
+
+      const allTasks = [...activeTasks, ...completedTasks];
+      const filteredTasks = allTasks.filter((task) =>
+        statuses.includes(task.status)
+      );
+
+      setTasks(filteredTasks);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao carregar tarefas.';
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Erro ao carregar tarefas.';
+
       setError(message);
       toast.error(message);
     } finally {
@@ -24,156 +39,271 @@ export function useTasks(statuses: TaskStatus[]) {
     }
   }, [statuses]);
 
-  const addTask = useCallback(async (formData: TaskFormData, userId: string) => {
-    const tempId = `temp-${Date.now()}`;
-    if (savingRef.current.has(tempId)) return;
-    savingRef.current.add(tempId);
+  const addTask = useCallback(
+    async (formData: TaskFormData, _userId: string) => {
+      const tempId = `temp-${Date.now()}`;
 
-    try {
-      const newTask = await taskService.createTask(formData, userId);
-      // Only add if the task matches current view statuses
-      if (statuses.includes(newTask.status)) {
-        setTasks((prev) => [newTask, ...prev]);
+      if (savingRef.current.has(tempId)) return;
+      savingRef.current.add(tempId);
+
+      try {
+        const newTask = await taskService.createTask({
+          ...formData,
+          status: 'todo',
+        });
+
+        if (statuses.includes(newTask.status)) {
+          setTasks((prev) => [newTask, ...prev]);
+        }
+
+        toast.success('Tarefa criada com sucesso!');
+        return newTask;
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao criar tarefa.';
+
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(tempId);
       }
-      toast.success('Tarefa criada com sucesso!');
-      return newTask;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(tempId);
-    }
-  }, [statuses]);
+    },
+    [statuses]
+  );
 
-  const editTask = useCallback(async (id: string, formData: Partial<Task>) => {
-    if (savingRef.current.has(id)) return;
-    savingRef.current.add(id);
+  const editTask = useCallback(
+    async (id: string, formData: Partial<Task>) => {
+      if (savingRef.current.has(id)) return;
+      savingRef.current.add(id);
 
-    const previousTasks = tasks;
+      const previousTasks = tasks;
 
-    try {
-      const currentTask = tasks.find((t) => t.id === id);
-      if (!currentTask) throw new Error('Tarefa não encontrada.');
+      try {
+        const currentTask = tasks.find((task) => task.id === id);
 
-      // Optimistic update
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...formData } : t))
-      );
+        if (!currentTask) {
+          throw new Error('Tarefa não encontrada.');
+        }
 
-      const updated = await taskService.updateTask(id, formData, currentTask.updated_at);
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? updated : t))
-      );
-      toast.success('Tarefa atualizada com sucesso!');
-      return updated;
-    } catch (err) {
-      // Rollback
-      setTasks(previousTasks);
-      const message = err instanceof Error ? err.message : 'Erro ao atualizar tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(id);
-    }
-  }, [tasks]);
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === id ? { ...task, ...formData } : task
+          )
+        );
 
-  const removeTask = useCallback(async (id: string) => {
-    if (savingRef.current.has(id)) return;
-    savingRef.current.add(id);
+        const updated = await taskService.updateTask(id, formData);
 
-    const previousTasks = tasks;
+        setTasks((prev) =>
+          prev.map((task) => (task.id === id ? updated : task))
+        );
 
-    try {
-      // Optimistic removal
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      await taskService.deleteTask(id);
-      toast.success('Tarefa excluída com sucesso!');
-    } catch (err) {
-      setTasks(previousTasks);
-      const message = err instanceof Error ? err.message : 'Erro ao excluir tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(id);
-    }
-  }, [tasks]);
+        toast.success('Tarefa atualizada com sucesso!');
+        return updated;
+      } catch (err) {
+        setTasks(previousTasks);
 
-  const moveTask = useCallback(async (id: string, newStatus: TaskStatus) => {
-    if (savingRef.current.has(id)) return;
-    savingRef.current.add(id);
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao atualizar tarefa.';
 
-    const previousTasks = tasks;
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(id);
+      }
+    },
+    [tasks]
+  );
 
-    try {
-      const currentTask = tasks.find((t) => t.id === id);
-      if (!currentTask) throw new Error('Tarefa não encontrada.');
+  const removeTask = useCallback(
+    async (id: string) => {
+      if (savingRef.current.has(id)) return;
+      savingRef.current.add(id);
 
-      // Optimistic update
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-      );
+      const previousTasks = tasks;
 
-      await taskService.updateTaskStatus(id, newStatus, currentTask.updated_at);
-    } catch (err) {
-      setTasks(previousTasks);
-      const message = err instanceof Error ? err.message : 'Erro ao mover tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(id);
-    }
-  }, [tasks]);
+      try {
+        setTasks((prev) => prev.filter((task) => task.id !== id));
 
-  const completeTaskAction = useCallback(async (id: string) => {
-    if (savingRef.current.has(id)) return;
-    savingRef.current.add(id);
+        await taskService.deleteTask(id);
 
-    const previousTasks = tasks;
+        toast.success('Tarefa excluída com sucesso!');
+      } catch (err) {
+        setTasks(previousTasks);
 
-    try {
-      const currentTask = tasks.find((t) => t.id === id);
-      if (!currentTask) throw new Error('Tarefa não encontrada.');
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao excluir tarefa.';
 
-      // Optimistic removal from active board
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(id);
+      }
+    },
+    [tasks]
+  );
 
-      await taskService.completeTask(id, currentTask.updated_at);
-      toast.success('Tarefa concluída!');
-    } catch (err) {
-      setTasks(previousTasks);
-      const message = err instanceof Error ? err.message : 'Erro ao concluir tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(id);
-    }
-  }, [tasks]);
+  const moveTask = useCallback(
+    async (id: string, newStatus: TaskStatus) => {
+      if (savingRef.current.has(id)) return;
+      savingRef.current.add(id);
 
-  const reopenTaskAction = useCallback(async (id: string, newStatus: TaskStatus) => {
-    if (savingRef.current.has(id)) return;
-    savingRef.current.add(id);
+      const previousTasks = tasks;
 
-    const previousTasks = tasks;
+      try {
+        const currentTask = tasks.find((task) => task.id === id);
 
-    try {
-      const currentTask = tasks.find((t) => t.id === id);
-      if (!currentTask) throw new Error('Tarefa não encontrada.');
+        if (!currentTask) {
+          throw new Error('Tarefa não encontrada.');
+        }
 
-      // Optimistic removal from completed view
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+        if (newStatus === 'completed') {
+          await taskService.completeTask(id);
+        } else if (currentTask.status === 'completed') {
+          await taskService.reopenTask(
+            id,
+            newStatus as Exclude<TaskStatus, 'completed'>
+          );
+        } else {
+          await taskService.updateTask(id, { status: newStatus });
+        }
 
-      await taskService.reopenTask(id, newStatus, currentTask.updated_at);
-      toast.success('Tarefa reaberta!');
-    } catch (err) {
-      setTasks(previousTasks);
-      const message = err instanceof Error ? err.message : 'Erro ao reabrir tarefa.';
-      toast.error(message);
-      throw err;
-    } finally {
-      savingRef.current.delete(id);
-    }
-  }, [tasks]);
+        if (!statuses.includes(newStatus)) {
+          setTasks((prev) =>
+            prev.filter((task) => task.id !== id)
+          );
+        } else {
+          setTasks((prev) =>
+            prev.map((task) =>
+              task.id === id
+                ? {
+                  ...task,
+                  status: newStatus,
+                  ...(newStatus === 'completed'
+                    ? { completed_at: new Date().toISOString() }
+                    : { completed_at: null }),
+                }
+                : task
+            )
+          );
+        }
+      } catch (err) {
+        setTasks(previousTasks);
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao mover tarefa.';
+
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(id);
+      }
+    },
+    [tasks, statuses]
+  );
+
+  const completeTaskAction = useCallback(
+    async (id: string) => {
+      if (savingRef.current.has(id)) return;
+      savingRef.current.add(id);
+
+      const previousTasks = tasks;
+
+      try {
+        const currentTask = tasks.find((task) => task.id === id);
+
+        if (!currentTask) {
+          throw new Error('Tarefa não encontrada.');
+        }
+
+        await taskService.completeTask(id);
+
+        setTasks((prev) =>
+          statuses.includes('completed')
+            ? prev.map((task) =>
+              task.id === id
+                ? {
+                  ...task,
+                  status: 'completed',
+                  completed_at: new Date().toISOString(),
+                }
+                : task
+            )
+            : prev.filter((task) => task.id !== id)
+        );
+
+        toast.success('Tarefa concluída!');
+      } catch (err) {
+        setTasks(previousTasks);
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao concluir tarefa.';
+
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(id);
+      }
+    },
+    [tasks, statuses]
+  );
+
+  const reopenTaskAction = useCallback(
+    async (id: string, newStatus: Exclude<TaskStatus, 'completed'>) => {
+      if (savingRef.current.has(id)) return;
+      savingRef.current.add(id);
+
+      const previousTasks = tasks;
+
+      try {
+        const currentTask = tasks.find((task) => task.id === id);
+
+        if (!currentTask) {
+          throw new Error('Tarefa não encontrada.');
+        }
+
+        await taskService.reopenTask(id, newStatus);
+
+        setTasks((prev) =>
+          statuses.includes(newStatus)
+            ? prev.map((task) =>
+              task.id === id
+                ? {
+                  ...task,
+                  status: newStatus,
+                  completed_at: null,
+                }
+                : task
+            )
+            : prev.filter((task) => task.id !== id)
+        );
+
+        toast.success('Tarefa reaberta!');
+      } catch (err) {
+        setTasks(previousTasks);
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Erro ao reabrir tarefa.';
+
+        toast.error(message);
+        throw err;
+      } finally {
+        savingRef.current.delete(id);
+      }
+    },
+    [tasks, statuses]
+  );
 
   return {
     tasks,

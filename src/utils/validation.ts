@@ -1,4 +1,4 @@
-import type { TaskFormData } from '@/types';
+import type { TaskFormData } from '../types';
 
 export function validateTaskTitle(title: string): { valid: boolean; error?: string } {
   const trimmed = title.trim();
