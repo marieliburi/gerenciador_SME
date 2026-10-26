@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Task, TaskCategory, TaskPriority } from '../types/task';
-import { X, Plus, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2 } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;

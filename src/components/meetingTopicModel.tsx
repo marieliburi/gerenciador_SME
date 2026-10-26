@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { MeetingTopic } from '../types/meetingTopic';
-import { X, Plus, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2 } from 'lucide-react';
 
 interface MeetingTopicModalProps {
   isOpen: boolean;
