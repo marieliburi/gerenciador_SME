@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
 import AuthModal from './components/AuthModal';
-import FirstAccessPassword from './components/FirstAccessPassword';
 import TaskModal from './components/TaskModal';
 import type { Task } from './types/task';
 import MeetingTopicsView from './components/meetingTopicView';
@@ -26,7 +25,7 @@ import {
   Calendar,
   Pencil,
   User,
-  LayoutGrid,
+  LayoutGrid
 } from 'lucide-react';
 
 export default function App() {
@@ -38,52 +37,29 @@ export default function App() {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
-  // Navegação de telas
-  const [activeNav, setActiveNav] = useState<
-    'kanban' | 'meeting_topics' | 'completed' | 'notes'
-  >('kanban');
-
-  // Estado das pautas
+  // Navegação de Telas: 'kanban' | 'meeting_topics' | 'completed' | 'notes'
+  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'completed' | 'notes'>('kanban');
+  // Estado das Pautas
   const [isMeetingTopicModalOpen, setIsMeetingTopicModalOpen] = useState(false);
   const [topicToEdit, setTopicToEdit] = useState<MeetingTopic | null>(null);
-  const [fetchMeetingTopicsFn, setFetchMeetingTopicsFn] = useState<
-    (() => void) | null
-  >(null);
+  const [fetchMeetingTopicsFn, setFetchMeetingTopicsFn] = useState<(() => void) | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-
-    const applySession = (newSession: Session | null) => {
-      if (!mounted) return;
-      setSession(newSession);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setLoading(false);
-    };
-
-    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
-      if (error) {
-        console.error('Erro ao recuperar sessão:', error);
-      }
-      applySession(currentSession);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      applySession(newSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchTasks = useCallback(async () => {
-    if (!session?.user) {
-      setTasks([]);
-      return;
-    }
-
+    if (!session?.user) return;
     setLoadingTasks(true);
 
     try {
@@ -99,13 +75,11 @@ export default function App() {
     } finally {
       setLoadingTasks(false);
     }
-  }, [session?.user?.id]);
+  }, [session]);
 
   useEffect(() => {
     if (session) {
-      void fetchTasks();
-    } else {
-      setTasks([]);
+      fetchTasks();
     }
   }, [session, fetchTasks]);
 
@@ -115,10 +89,9 @@ export default function App() {
     try {
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) throw error;
-      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (err) {
       console.error('Erro ao deletar tarefa:', err);
-      alert('Não foi possível excluir a tarefa.');
     }
   };
 
@@ -145,15 +118,12 @@ export default function App() {
       if (error) throw error;
 
       setTasks((prev) =>
-        prev.map((item) =>
-          item.id === task.id
-            ? { ...item, status: newStatus, completed_at: completedAt }
-            : item,
-        ),
+        prev.map((t) =>
+          t.id === task.id ? { ...t, status: newStatus, completed_at: completedAt } : t
+        )
       );
     } catch (err) {
       console.error('Erro ao alterar status da tarefa:', err);
-      alert('Não foi possível alterar o status da tarefa.');
     }
   };
 
@@ -181,14 +151,13 @@ export default function App() {
 
     if (diffDays < 0) {
       return { text: `Atrasado há ${Math.abs(diffDays)} dia(s)`, isLate: true };
-    }
-    if (diffDays === 0) {
+    } else if (diffDays === 0) {
       return { text: 'Vence hoje!', isLate: false };
-    }
-    if (diffDays === 1) {
+    } else if (diffDays === 1) {
       return { text: 'Vence amanhã', isLate: false };
+    } else {
+      return { text: `Faltam ${diffDays} dias`, isLate: false };
     }
-    return { text: `Faltam ${diffDays} dias`, isLate: false };
   };
 
   const toggleCardExpansion = (taskId: string) => {
@@ -197,8 +166,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -207,39 +176,17 @@ export default function App() {
     return <AuthModal />;
   }
 
-  // A conta precisa ter sido criada pelo administrador com este metadado:
-  // user_metadata.must_change_password = true
-  // Após a definição da senha, FirstAccessPassword altera esse valor para false.
-  if (session.user.user_metadata?.must_change_password === true) {
-    return (
-      <FirstAccessPassword
-        onPasswordChanged={async () => {
-          const { data, error } = await supabase.auth.getUser();
-
-          if (error || !data.user) {
-            console.error('Não foi possível atualizar os dados do usuário:', error);
-            return;
-          }
-
-          setSession((current) => {
-            if (!current) return current;
-            return { ...current, user: data.user };
-          });
-        }}
-      />
-    );
-  }
-
+  // Nome do usuário para o cabeçalho
   const currentUserName = session.user.email?.split('@')[0] || 'usuario';
 
   const totalTasks = tasks.length;
   const userSupportTasks = tasks.filter(
-    (task) => task.category === 'user_support' && task.status !== 'completed',
+    (t) => t.category === 'user_support' && t.status !== 'completed'
   );
   const systemUpdateTasks = tasks.filter(
-    (task) => task.category === 'system_update' && task.status !== 'completed',
+    (t) => t.category === 'system_update' && t.status !== 'completed'
   );
-  const completedTasks = tasks.filter((task) => task.status === 'completed');
+  const completedTasks = tasks.filter((t) => t.status === 'completed');
 
   const getCardColorClass = (task: Task, index: number) => {
     if (task.card_color) return task.card_color;
@@ -251,20 +198,23 @@ export default function App() {
 
   return (
     <div className="dashboard-page">
+      {/* CABEÇALHO REESTRUTURADO */}
       <header className="dash-header">
         <div className="dash-header-container">
+          {/* Esquerda: Identificação do Usuário Logado */}
           <div className="dash-user-badge">
-            <User className="h-4 w-4 text-slate-500" />
+            <User className="w-4 h-4 text-slate-500" />
             <span>{currentUserName}</span>
           </div>
 
+          {/* Direita: Menu de Links Pretos + Logout (Alinhados à Direita) */}
           <div className="dash-header-right">
             <nav className="dash-nav-links">
               <button
                 onClick={() => setActiveNav('kanban')}
                 className={`nav-link ${activeNav === 'kanban' ? 'active-black' : ''}`}
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="w-4 h-4" />
                 <span>Quadro</span>
               </button>
 
@@ -272,7 +222,7 @@ export default function App() {
                 onClick={() => setActiveNav('meeting_topics')}
                 className={`nav-link ${activeNav === 'meeting_topics' ? 'active-black' : ''}`}
               >
-                <MessageSquare className="h-4 w-4" />
+                <MessageSquare className="w-4 h-4" />
                 <span>Pautas</span>
               </button>
 
@@ -280,7 +230,7 @@ export default function App() {
                 onClick={() => setActiveNav('notes')}
                 className={`nav-link ${activeNav === 'notes' ? 'active-black' : ''}`}
               >
-                <StickyNote className="h-4 w-4" />
+                <StickyNote className="w-4 h-4" />
                 <span>Notas</span>
               </button>
 
@@ -288,23 +238,25 @@ export default function App() {
                 onClick={() => setActiveNav('completed')}
                 className={`nav-link ${activeNav === 'completed' ? 'active-black' : ''}`}
               >
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="w-4 h-4" />
                 <span>Concluídas ({completedTasks.length})</span>
               </button>
             </nav>
 
             <button
-              onClick={() => void supabase.auth.signOut()}
+              onClick={() => supabase.auth.signOut()}
               className="btn-logout"
               title="Sair da conta"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
+      {/* CONTEÚDO PRINCIPAL BASEADO NA NAVEGAÇÃO ATIVA */}
       <main className="dash-content">
+        {/* VIEW 1: PAUTAS DE REUNIÃO */}
         {activeNav === 'meeting_topics' && (
           <MeetingTopicsView
             onOpenCreateModal={() => {
@@ -319,13 +271,15 @@ export default function App() {
           />
         )}
 
+        {/* VIEW 2: MURAL DE NOTAS (INCLUÍDO AQUI) */}
         {activeNav === 'notes' && <NotesView />}
 
+        {/* VIEW 3: TAREFAS CONCLUÍDAS */}
         {activeNav === 'completed' && (
           <div className="kanban-column">
             <div className="column-banner completed">
               <div className="column-banner-title">
-                <CheckCircle2 className="h-5 w-5" />
+                <CheckCircle2 className="w-5 h-5" />
                 <div>
                   <h3>Tarefas Concluídas</h3>
                   <p>Histórico de demandas já finalizadas</p>
@@ -336,9 +290,7 @@ export default function App() {
 
             <div className="task-list">
               {completedTasks.length === 0 ? (
-                <div className="empty-task-state">
-                  Nenhuma tarefa concluída no momento.
-                </div>
+                <div className="empty-task-state">Nenhuma tarefa concluída no momento.</div>
               ) : (
                 completedTasks.map((task) => (
                   <div key={task.id} className="task-card green opacity-85">
@@ -346,32 +298,28 @@ export default function App() {
                       <span className="task-tag">Concluído</span>
                       <div className="task-card-header-actions">
                         <button
-                          onClick={() => void handleToggleComplete(task)}
+                          onClick={() => handleToggleComplete(task)}
                           className="task-action-icon"
                           title="Reabrir tarefa"
                         >
-                          <RotateCcw className="h-4 w-4 text-blue-600" />
+                          <RotateCcw className="w-4 h-4 text-blue-600" />
                         </button>
                         <button
-                          onClick={() => void handleDeleteTask(task.id)}
+                          onClick={() => handleDeleteTask(task.id)}
                           className="task-action-icon"
                           title="Excluir"
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="w-4 h-4 text-red-500" />
                         </button>
                       </div>
                     </div>
 
                     <h4 className="task-card-title line-through">{task.title}</h4>
-                    {task.description && (
-                      <p className="task-card-desc">{task.description}</p>
-                    )}
+                    {task.description && <p className="task-card-desc">{task.description}</p>}
 
                     <div className="task-card-footer">
                       <span className="task-author">Finalizado</span>
-                      <span className="task-author">
-                        {task.created_by_name || 'usuario'}
-                      </span>
+                      <span className="task-author">{task.created_by_name || 'usuario'}</span>
                     </div>
                   </div>
                 ))
@@ -380,6 +328,7 @@ export default function App() {
           </div>
         )}
 
+        {/* VIEW 4: QUADRO KANBAN PRINCIPAL */}
         {activeNav === 'kanban' && (
           <>
             <h2 className="dash-page-title">Quadro de tarefas</h2>
@@ -394,14 +343,14 @@ export default function App() {
                   </div>
                 </div>
                 <div className="metric-icon-box">
-                  <SlidersHorizontal className="h-5 w-5" />
+                  <SlidersHorizontal className="w-5 h-5" />
                 </div>
               </div>
 
               <div className="metric-card">
                 <div>
                   <div className="metric-card-label">
-                    <span className="dot dot-blue" /> ATENDIMENTO AO USUÁRIO
+                    <span className="dot dot-blue"></span> ATENDIMENTO AO USUÁRIO
                   </div>
                   <div className="metric-card-value">
                     <span className="number">{userSupportTasks.length}</span>
@@ -409,14 +358,14 @@ export default function App() {
                   </div>
                 </div>
                 <div className="metric-icon-box blue">
-                  <Clock className="h-5 w-5" />
+                  <Clock className="w-5 h-5" />
                 </div>
               </div>
 
               <div className="metric-card">
                 <div>
                   <div className="metric-card-label">
-                    <span className="dot dot-purple" /> DEMANDA SIGUESCOLA
+                    <span className="dot dot-purple"></span> DEMANDA SIGUESCOLA
                   </div>
                   <div className="metric-card-value">
                     <span className="number">{systemUpdateTasks.length}</span>
@@ -424,21 +373,22 @@ export default function App() {
                   </div>
                 </div>
                 <div className="metric-icon-box purple">
-                  <GraduationCap className="h-5 w-5" />
+                  <GraduationCap className="w-5 h-5" />
                 </div>
               </div>
             </div>
 
             {loadingTasks ? (
-              <div className="flex h-48 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <div className="flex justify-center items-center h-48">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               </div>
             ) : (
               <div className="kanban-grid">
+                {/* QUADRO 1: Atendimento ao usuário */}
                 <div className="kanban-column">
                   <div className="column-banner suporte">
                     <div className="column-banner-title">
-                      <Clock className="h-5 w-5" />
+                      <Clock className="w-5 h-5" />
                       <div>
                         <h3>Atendimento ao usuário</h3>
                       </div>
@@ -446,7 +396,7 @@ export default function App() {
                     <div className="column-banner-actions">
                       <span className="badge-count">{userSupportTasks.length} tarefas</span>
                       <button onClick={handleOpenCreateModal} className="btn-add-column">
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="w-3.5 h-3.5" />
                         <span>Adicionar</span>
                       </button>
                     </div>
@@ -454,9 +404,7 @@ export default function App() {
 
                   <div className="task-list">
                     {userSupportTasks.length === 0 ? (
-                      <div className="empty-task-state">
-                        Nenhum chamado ativo no momento.
-                      </div>
+                      <div className="empty-task-state">Nenhum chamado ativo no momento.</div>
                     ) : (
                       userSupportTasks.map((task, idx) => {
                         const colorClass = getCardColorClass(task, idx);
@@ -469,51 +417,46 @@ export default function App() {
                             className={`task-card ${colorClass} ${isExpanded ? 'expanded' : ''}`}
                           >
                             <div className="task-card-header">
-                              <span className="task-tag">
-                                Chamado #{task.id.substring(0, 4)}
-                              </span>
+                              <span className="task-tag">Chamado #{task.id.substring(0, 4)}</span>
                               <div
                                 className="task-card-header-actions"
-                                onClick={(event) => event.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="task-action-icon"
                                   title="Editar tarefa"
                                 >
-                                  <Pencil className="h-4 w-4 text-slate-600 hover:text-slate-900" />
+                                  <Pencil className="w-4 h-4 text-slate-600 hover:text-slate-900" />
                                 </button>
                                 <button
-                                  onClick={() => void handleToggleComplete(task)}
+                                  onClick={() => handleToggleComplete(task)}
                                   className="task-action-icon"
                                   title="Concluir tarefa"
                                 >
-                                  <Check className="h-4 w-4 text-emerald-600 hover:text-emerald-800" />
+                                  <Check className="w-4 h-4 text-emerald-600 hover:text-emerald-800" />
                                 </button>
                                 <button
-                                  onClick={() => void handleDeleteTask(task.id)}
+                                  onClick={() => handleDeleteTask(task.id)}
                                   className="task-action-icon"
                                   title="Excluir"
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                  <Trash2 className="w-4 h-4 text-red-500" />
                                 </button>
                               </div>
                             </div>
 
                             <h4 className="task-card-title">{task.title}</h4>
-                            {task.description && (
-                              <p className="task-card-desc">{task.description}</p>
-                            )}
+                            {task.description && <p className="task-card-desc">{task.description}</p>}
 
                             <div className="task-card-footer">
                               <span
-                                className={`priority-pill ${
-                                  task.priority === 'high'
-                                    ? 'high'
-                                    : task.priority === 'low'
-                                      ? 'low'
-                                      : 'medium'
-                                }`}
+                                className={`priority-pill ${task.priority === 'high'
+                                  ? 'high'
+                                  : task.priority === 'low'
+                                    ? 'low'
+                                    : 'medium'
+                                  }`}
                               >
                                 {task.priority === 'high'
                                   ? 'Alta prioridade'
@@ -521,9 +464,7 @@ export default function App() {
                                     ? 'Baixa prioridade'
                                     : 'Média prioridade'}
                               </span>
-                              <span className="task-author">
-                                {task.created_by_name || 'usuario'}
-                              </span>
+                              <span className="task-author">{task.created_by_name || 'usuario'}</span>
                             </div>
                           </div>
                         );
@@ -532,10 +473,11 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* QUADRO 2: Demanda Siguescola */}
                 <div className="kanban-column">
                   <div className="column-banner siguescola">
                     <div className="column-banner-title">
-                      <GraduationCap className="h-5 w-5" />
+                      <GraduationCap className="w-5 h-5" />
                       <div>
                         <h3>Demanda Siguescola</h3>
                       </div>
@@ -543,7 +485,7 @@ export default function App() {
                     <div className="column-banner-actions">
                       <span className="badge-count">{systemUpdateTasks.length} tarefas</span>
                       <button onClick={handleOpenCreateModal} className="btn-add-column">
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="w-3.5 h-3.5" />
                         <span>Adicionar</span>
                       </button>
                     </div>
@@ -551,9 +493,7 @@ export default function App() {
 
                   <div className="task-list">
                     {systemUpdateTasks.length === 0 ? (
-                      <div className="empty-task-state">
-                        Nenhuma demanda cadastrada no momento.
-                      </div>
+                      <div className="empty-task-state">Nenhuma demanda cadastrada no momento.</div>
                     ) : (
                       systemUpdateTasks.map((task, idx) => {
                         const colorClass = getCardColorClass(task, idx + 1);
@@ -568,68 +508,61 @@ export default function App() {
                           >
                             <div className="task-card-header">
                               <span className="task-tag">
-                                {task.category === 'system_update'
-                                  ? 'Siguescola'
-                                  : 'Interface'}
+                                {task.category === 'system_update' ? 'Siguescola' : 'Interface'}
                               </span>
                               <div
                                 className="task-card-header-actions"
-                                onClick={(event) => event.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="task-action-icon"
                                   title="Editar tarefa"
                                 >
-                                  <Pencil className="h-4 w-4 text-slate-600 hover:text-slate-900" />
+                                  <Pencil className="w-4 h-4 text-slate-600 hover:text-slate-900" />
                                 </button>
                                 <button
-                                  onClick={() => void handleToggleComplete(task)}
+                                  onClick={() => handleToggleComplete(task)}
                                   className="task-action-icon"
                                   title="Concluir tarefa"
                                 >
-                                  <Check className="h-4 w-4 text-emerald-600 hover:text-emerald-800" />
+                                  <Check className="w-4 h-4 text-emerald-600 hover:text-emerald-800" />
                                 </button>
                                 <button
-                                  onClick={() => void handleDeleteTask(task.id)}
+                                  onClick={() => handleDeleteTask(task.id)}
                                   className="task-action-icon"
                                   title="Excluir"
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                  <Trash2 className="w-4 h-4 text-red-500" />
                                 </button>
                               </div>
                             </div>
 
                             <h4 className="task-card-title">{task.title}</h4>
-                            {task.description && (
-                              <p className="task-card-desc">{task.description}</p>
-                            )}
+                            {task.description && <p className="task-card-desc">{task.description}</p>}
 
+                            {/* EXIBIÇÃO DE PRAZO CONDICIONAL */}
                             {isExpanded && task.category === 'system_update' && (
                               <div className="task-card-expanded-details">
                                 {task.due_date ? (
                                   <div className="due-date-box">
                                     <div className="due-date-info">
-                                      <Calendar className="h-4 w-4 text-slate-500" />
+                                      <Calendar className="w-4 h-4 text-slate-500" />
                                       <span>
                                         Prazo:{' '}
-                                        {new Date(task.due_date).toLocaleDateString(
-                                          'pt-BR',
-                                          {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                          },
-                                        )}
+                                        {new Date(task.due_date).toLocaleDateString('pt-BR', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
                                       </span>
                                     </div>
                                     {daysInfo && (
                                       <span
-                                        className={`days-badge ${
-                                          daysInfo.isLate ? 'late' : ''
-                                        }`}
+                                        className={`days-badge ${daysInfo.isLate ? 'late' : ''
+                                          }`}
                                       >
                                         {daysInfo.text}
                                       </span>
@@ -645,13 +578,12 @@ export default function App() {
 
                             <div className="task-card-footer">
                               <span
-                                className={`priority-pill ${
-                                  task.priority === 'high'
-                                    ? 'high'
-                                    : task.priority === 'low'
-                                      ? 'low'
-                                      : 'medium'
-                                }`}
+                                className={`priority-pill ${task.priority === 'high'
+                                  ? 'high'
+                                  : task.priority === 'low'
+                                    ? 'low'
+                                    : 'medium'
+                                  }`}
                               >
                                 {task.priority === 'high'
                                   ? 'Alta prioridade'
@@ -659,9 +591,7 @@ export default function App() {
                                     ? 'Baixa prioridade'
                                     : 'Média prioridade'}
                               </span>
-                              <span className="task-author">
-                                {task.created_by_name || 'usuario'}
-                              </span>
+                              <span className="task-author">{task.created_by_name || 'usuario'}</span>
                             </div>
                           </div>
                         );
@@ -675,6 +605,7 @@ export default function App() {
         )}
       </main>
 
+      {/* Modal de Tarefas */}
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -685,6 +616,7 @@ export default function App() {
         taskToEdit={taskToEdit}
       />
 
+      {/* Modal de Pautas para Reunião */}
       <MeetingTopicModal
         isOpen={isMeetingTopicModalOpen}
         onClose={() => {
