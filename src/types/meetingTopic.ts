@@ -1,18 +1,21 @@
-export type MeetingTopicStatus = 'pendente' | 'em_discussao' | 'aprovado' | 'rejeitado';
+// src/types/meetingTopic.ts
+
+export interface MeetingTopicItem {
+  id: string;
+  topic_id: string;
+  content: string;
+  is_completed: boolean;
+  position?: number;
+  created_at?: string;
+}
 
 export interface MeetingTopic {
   id: string;
   title: string;
   description?: string | null;
-  status: MeetingTopicStatus;
-  votes: number;
-  created_by: string;
-  created_by_name?: string | null;
-  created_at: string;
-  updated_at: string;
+  status?: 'active' | 'completed' | 'archived';
+  created_by?: string;
+  created_by_name?: string;
+  created_at?: string;
+  items?: MeetingTopicItem[]; // Itens vinculados à pauta
 }
-
-export type CreateMeetingTopicDTO = Omit<
-  MeetingTopic,
-  'id' | 'created_at' | 'updated_at' | 'created_by' | 'votes'
->;
