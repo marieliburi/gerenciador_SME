@@ -183,3 +183,45 @@
 .postit-action-btn:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
+
+
+.corkboard-container {
+  position: relative;
+}
+
+.fullscreen-button {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #5c3a21;
+  border-radius: 8px;
+  background: rgba(165, 133, 113, 0.842);
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.fullscreen-button:hover {
+  background: rgb(131, 98, 77);
+}
+
+.corkboard-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 20px;
+  overflow: auto;
+  box-sizing: border-box;
+  border-radius: 0;
+}

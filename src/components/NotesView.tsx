@@ -1,17 +1,55 @@
-import React, { useEffect, useState, useCallback } from 'react';
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  Plus,
+  Trash2,
+  Check,
+  Loader2,
+  Maximize,
+  Minimize,
+} from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Note } from '../types/note';
 import '../styles/notes.css';
-import { Plus, Trash2, Check, Loader2 } from 'lucide-react';
 
 export default function NotesView() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  const handleFullscreen = async () => {
+    if (!boardRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await boardRef.current.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Erro ao ativar tela cheia:', error);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === boardRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
+
     try {
       const { data, error } = await supabase
         .from('quick_notes')
@@ -19,6 +57,7 @@ export default function NotesView() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+
       setNotes(data || []);
     } catch (err) {
       console.error('Erro ao buscar notas:', err);
@@ -46,14 +85,21 @@ export default function NotesView() {
 
   const handleCreateNote = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!content.trim()) return;
 
     setSubmitting(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) throw new Error('Usuário não autenticado');
 
-      const authorName = user.email ? user.email.split('@')[0] : 'usuario';
+      const authorName = user.email
+        ? user.email.split('@')[0]
+        : 'usuario';
 
       const { error } = await supabase.from('quick_notes').insert([
         {
@@ -67,7 +113,7 @@ export default function NotesView() {
       if (error) throw error;
 
       setContent('');
-      fetchNotes();
+      await fetchNotes();
     } catch (err) {
       console.error('Erro ao criar nota:', err);
     } finally {
@@ -83,9 +129,12 @@ export default function NotesView() {
         .eq('id', note.id);
 
       if (error) throw error;
+
       setNotes((prev) =>
         prev.map((n) =>
-          n.id === note.id ? { ...n, is_completed: !n.is_completed } : n
+          n.id === note.id
+            ? { ...n, is_completed: !n.is_completed }
+            : n
         )
       );
     } catch (err) {
@@ -95,8 +144,13 @@ export default function NotesView() {
 
   const handleDeleteNote = async (id: string) => {
     try {
-      const { error } = await supabase.from('quick_notes').delete().eq('id', id);
+      const { error } = await supabase
+        .from('quick_notes')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
+
       setNotes((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
       console.error('Erro ao excluir nota:', err);
@@ -105,8 +159,7 @@ export default function NotesView() {
 
   return (
     <div className="notes-section">
-      
-      {/* Caixa de Criação de Nota */}
+      {/* Caixa de criação de nota */}
       <form onSubmit={handleCreateNote} className="note-creator-card">
         <textarea
           rows={2}
@@ -134,8 +187,27 @@ export default function NotesView() {
         </div>
       </form>
 
-      {/* QUADRO DE CORTIÇA COM OS POST-ITS */}
-      <div className="corkboard-container">
+      {/* Quadro de cortiça */}
+      <div
+        ref={boardRef}
+        className={`corkboard-container ${
+          isFullscreen ? 'corkboard-fullscreen' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={handleFullscreen}
+          className="fullscreen-button"
+          title={isFullscreen ? 'Sair da tela cheia' : 'Expandir quadro'}
+        >
+          {isFullscreen ? (
+            <Minimize size={20} />
+          ) : (
+            <Maximize size={20} />
+          )}
+          
+        </button>
+
         {loading ? (
           <div className="flex justify-center items-center h-48">
             <Loader2 className="w-8 h-8 animate-spin text-amber-100" />
@@ -148,8 +220,11 @@ export default function NotesView() {
           <div className="notes-grid">
             {notes.map((note) => (
               <div key={note.id}>
-                <div className={`postit-card ${note.is_completed ? 'completed' : ''}`}>
-                  {/* Alfinete Vermelho */}
+                <div
+                  className={`postit-card ${
+                    note.is_completed ? 'completed' : ''
+                  }`}
+                >
                   <div className="pin-red" />
 
                   <p className="postit-content">{note.content}</p>
@@ -161,13 +236,20 @@ export default function NotesView() {
 
                     <div className="postit-actions">
                       <button
+                        type="button"
                         onClick={() => handleToggleComplete(note)}
                         className="postit-action-btn"
-                        title={note.is_completed ? 'Reabrir nota' : 'Concluir nota'}
+                        title={
+                          note.is_completed
+                            ? 'Reabrir nota'
+                            : 'Concluir nota'
+                        }
                       >
                         <Check className="w-4 h-4" />
                       </button>
+
                       <button
+                        type="button"
                         onClick={() => handleDeleteNote(note.id)}
                         className="postit-action-btn"
                         title="Excluir nota"
