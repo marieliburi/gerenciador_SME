@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Note } from '../types/note';
 import '../styles/notes.css';
-import { StickyNote, Plus, Trash2, Check, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Check, Loader2 } from 'lucide-react';
 
 export default function NotesView() {
   const [notes, setNotes] = useState<Note[]>([]);
