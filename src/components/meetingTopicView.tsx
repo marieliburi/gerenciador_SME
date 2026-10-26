@@ -1,16 +1,16 @@
 // src/components/meetingTopicView.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { MeetingTopic, MeetingTopicItem } from '../types/meetingTopic';
+import type { MeetingTopic, PendingItem } from '../types/meetingTopic';
 import { 
   Plus, 
   Trash2, 
   MessageSquare, 
   CheckCircle2, 
-  Circle, 
-  FolderPlus, 
-  Loader2,
-  RotateCcw
+  Loader2, 
+  Pencil,
+  RotateCcw,
+  ListTodo
 } from 'lucide-react';
 
 import '../styles/meeting.css';
@@ -21,216 +21,121 @@ interface MeetingTopicsViewProps {
   onFetchTopicsRef?: (fetchFn: () => void) => void;
 }
 
-export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsViewProps) {
+export default function MeetingTopicsView({ onOpenCreateModal, onOpenEditModal, onFetchTopicsRef }: MeetingTopicsViewProps) {
   const [topics, setTopics] = useState<MeetingTopic[]>([]);
-  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
-  const [newItemText, setNewItemText] = useState('');
-  const [newTopicTitle, setNewTopicTitle] = useState('');
-  const [isCreatingTopic, setIsCreatingTopic] = useState(false);
+  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
+  
+  // Input para criar nova pendência
+  const [newPendingText, setNewPendingText] = useState('');
+  
   const [loading, setLoading] = useState(true);
-  const [submittingItem, setSubmittingItem] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Sub-aba interna: 'active' (Em Andamento) | 'completed' (Concluídas)
+  // Sub-aba interna do Quadro de Pautas: 'active' | 'completed'
   const [topicTab, setTopicTab] = useState<'active' | 'completed'>('active');
 
-  const fetchTopics = useCallback(async () => {
+  // Buscando pautas e itens da lista de pendências
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // 1. Busca Pautas
       const { data: topicsData, error: topicsError } = await supabase
         .from('meeting_topics')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (topicsError) throw topicsError;
+      setTopics(topicsData || []);
 
-      if (topicsData && topicsData.length > 0) {
-        const topicIds = topicsData.map(t => t.id);
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('meeting_topic_items')
-          .select('*')
-          .in('topic_id', topicIds)
-          .order('created_at', { ascending: true });
+      // 2. Busca Itens de Pendências
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('pending_items')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (itemsError) throw itemsError;
+      if (pendingError) throw pendingError;
+      setPendingItems(pendingData || []);
 
-        const formattedTopics: MeetingTopic[] = topicsData.map(topic => ({
-          ...topic,
-          items: (itemsData || []).filter(item => item.topic_id === topic.id)
-        }));
-
-        setTopics(formattedTopics);
-
-        if (!selectedTopicId && formattedTopics.length > 0) {
-          setSelectedTopicId(formattedTopics[0].id);
-        }
-      } else {
-        setTopics([]);
-      }
     } catch (err) {
-      console.error('Erro ao carregar pautas e itens:', err);
+      console.error('Erro ao carregar dados:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedTopicId]);
+  }, []);
 
   useEffect(() => {
-    fetchTopics();
+    fetchData();
     if (onFetchTopicsRef) {
-      onFetchTopicsRef(fetchTopics);
+      onFetchTopicsRef(fetchData);
     }
-  }, [fetchTopics, onFetchTopicsRef]);
+  }, [fetchData, onFetchTopicsRef]);
 
-  // Função auxiliar para verificar se uma pauta está concluída (tem itens e todos estão checados)
-  const isTopicCompleted = (topic: MeetingTopic) => {
-    if (!topic.items || topic.items.length === 0) return false;
-    return topic.items.every(i => i.is_completed);
-  };
+  // Separação entre Pautas Ativas e Concluídas
+  const activeTopics = topics.filter(t => t.status !== 'completed');
+  const completedTopics = topics.filter(t => t.status === 'completed');
 
-  // Separação das pautas ativas e concluídas
-  const activeTopics = topics.filter(t => !isTopicCompleted(t));
-  const completedTopics = topics.filter(t => isTopicCompleted(t));
-
-  // Criar Nova Pauta
-  const handleCreateTopic = async (e: React.FormEvent) => {
+  // 1. Criar novo Item na Lista de Pendências
+  const handleAddPendingItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTopicTitle.trim()) return;
+    if (!newPendingText.trim()) return;
 
+    setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from('meeting_topics')
-        .insert([
-          { 
-            title: newTopicTitle.trim(),
-            created_by: user?.id,
-            created_by_name: user?.email?.split('@')[0] || 'usuario'
-          }
-        ])
-        .select()
-        .single();
+      const { error } = await supabase.from('pending_items').insert([
+        { content: newPendingText.trim(), created_by: user?.id }
+      ]);
 
       if (error) throw error;
 
-      setNewTopicTitle('');
-      setIsCreatingTopic(false);
-      await fetchTopics();
-      if (data) setSelectedTopicId(data.id);
+      setNewPendingText('');
+      await fetchData();
     } catch (err) {
-      console.error('Erro ao criar pauta:', err);
-    }
-  };
-
-  // Adicionar Item/Assunto
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemText.trim() || !selectedTopicId) return;
-
-    setSubmittingItem(true);
-    try {
-      const { error } = await supabase
-        .from('meeting_topic_items')
-        .insert([
-          {
-            topic_id: selectedTopicId,
-            content: newItemText.trim(),
-            is_completed: false
-          }
-        ]);
-
-      if (error) throw error;
-
-      setNewItemText('');
-      await fetchTopics();
-    } catch (err) {
-      console.error('Erro ao adicionar item:', err);
+      console.error('Erro ao criar pendência:', err);
     } finally {
-      setSubmittingItem(false);
+      setSubmitting(false);
     }
   };
 
-  // Marcar / Desmarcar Item
-  const handleToggleItemStatus = async (item: MeetingTopicItem) => {
+  // 2. Apagar Item da Lista de Pendências Manualmente
+  const handleDeletePendingItem = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('meeting_topic_items')
-        .update({ is_completed: !item.is_completed })
-        .eq('id', item.id);
-
+      const { error } = await supabase.from('pending_items').delete().eq('id', id);
       if (error) throw error;
-
-      setTopics(prev =>
-        prev.map(topic => {
-          if (topic.id !== item.topic_id) return topic;
-          return {
-            ...topic,
-            items: topic.items?.map(i =>
-              i.id === item.id ? { ...i, is_completed: !i.is_completed } : i
-            )
-          };
-        })
-      );
+      setPendingItems(prev => prev.filter(item => item.id !== id));
     } catch (err) {
-      console.error('Erro ao alterar status do item:', err);
+      console.error('Erro ao deletar pendência:', err);
     }
   };
 
-  // Desmarcar TODOS os itens para reabrir a pauta
-  const handleReopenTopic = async (topic: MeetingTopic) => {
-    if (!confirm('Deseja reabrir esta pauta? Todos os itens voltarão ao estado pendente.')) return;
-
-    try {
-      const itemIds = (topic.items || []).map(i => i.id);
-      if (itemIds.length === 0) return;
-
-      const { error } = await supabase
-        .from('meeting_topic_items')
-        .update({ is_completed: false })
-        .in('id', itemIds);
-
-      if (error) throw error;
-
-      await fetchTopics();
-    } catch (err) {
-      console.error('Erro ao reabrir pauta:', err);
-    }
-  };
-
-  // Excluir Item
-  const handleDeleteItem = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('meeting_topic_items')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setTopics(prev =>
-        prev.map(topic => ({
-          ...topic,
-          items: topic.items?.filter(i => i.id !== itemId)
-        }))
-      );
-    } catch (err) {
-      console.error('Erro ao deletar item:', err);
-    }
-  };
-
-  // Excluir Pauta Completa
-  const handleDeleteTopic = async (topicId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta pauta e todos os seus itens?')) return;
+  // Alterar Status da Pauta (Concluir / Reabrir)
+  const handleToggleTopicStatus = async (topic: MeetingTopic) => {
+    const isCompleted = topic.status === 'completed';
+    const newStatus = isCompleted ? 'active' : 'completed';
 
     try {
       const { error } = await supabase
         .from('meeting_topics')
-        .delete()
-        .eq('id', topicId);
+        .update({ status: newStatus })
+        .eq('id', topic.id);
 
       if (error) throw error;
 
-      const remainingTopics = topics.filter(t => t.id !== topicId);
-      setTopics(remainingTopics);
-      setSelectedTopicId(remainingTopics.length > 0 ? remainingTopics[0].id : '');
+      setTopics(prev => prev.map(t => t.id === topic.id ? { ...t, status: newStatus } : t));
+    } catch (err) {
+      console.error('Erro ao alterar status da pauta:', err);
+    }
+  };
+
+  // Excluir Pauta
+  const handleDeleteTopic = async (topicId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta pauta?')) return;
+
+    try {
+      const { error } = await supabase.from('meeting_topics').delete().eq('id', topicId);
+      if (error) throw error;
+
+      setTopics(prev => prev.filter(t => t.id !== topicId));
     } catch (err) {
       console.error('Erro ao deletar pauta:', err);
     }
@@ -246,126 +151,124 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
 
   return (
     <div className="topics-container">
-      {/* NAVEGAÇÃO DE SUB-ABAS (EM ANDAMENTO x CONCLUÍDAS) */}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="dash-page-title mb-0">Pautas de Reunião</h2>
+      {/* 1. PAINEL DA LISTA DE PENDÊNCIAS (ISOLADA NO TOPO) */}
+      <div className="topic-pending-panel">
+        <div className="topic-pending-header">
+          <div className="flex items-center gap-2">
+            <ListTodo className="h-5 w-5 text-slate-700" />
+            <h3 className="text-base font-bold text-slate-900">Lista de Pendências</h3>
+          </div>
+        </div>
 
-        <div className="task-tabs-container">
+        {/* Input para adicionar nova pendência */}
+        <form onSubmit={handleAddPendingItem} className="topic-item-form mt-3">
+          <input
+            type="text"
+            placeholder="Digite uma nova pendência... (Pressione Enter)"
+            value={newPendingText}
+            onChange={(e) => setNewPendingText(e.target.value)}
+            disabled={submitting}
+            className="topic-item-input"
+          />
           <button
-            onClick={() => setTopicTab('active')}
-            className={`task-tab-btn ${topicTab === 'active' ? 'active' : ''}`}
+            type="submit"
+            disabled={submitting || !newPendingText.trim()}
+            className="btn-add-item"
           >
-            Em Andamento ({activeTopics.length})
+            <Plus className="h-4 w-4" />
+            <span>Adicionar</span>
           </button>
+        </form>
 
-          <button
-            onClick={() => setTopicTab('completed')}
-            className={`task-tab-btn ${topicTab === 'completed' ? 'active' : ''}`}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 icon-emerald" />
-            <span>Concluídas ({completedTopics.length})</span>
-          </button>
+        {/* Lista de itens pendentes */}
+        <div className="topic-items-list mt-3">
+          {pendingItems.length === 0 ? (
+            <div className="p-3 text-slate-400 text-xs italic text-center border-t border-slate-100 pt-3">
+              Nenhuma pendência cadastrada na lista.
+            </div>
+          ) : (
+            pendingItems.map((item) => (
+              <div key={item.id} className="topic-item-row">
+                <span className="topic-item-text">{item.content}</span>
+
+                <button
+                  onClick={() => handleDeletePendingItem(item.id)}
+                  className="btn-delete-icon"
+                  title="Excluir item da lista"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* ABA 1: PAUTAS EM ANDAMENTO */}
+      {/* 2. BARRA DE TÍTULO + SUB-ABAS (ESQUERDA) E BOTÃO "NOVA PAUTA" (DIREITA) */}
+      <div className="topics-header-bar">
+        <div className="flex items-center gap-4">
+          <h2 className="dash-page-title mb-0">Quadro de Pautas</h2>
+
+          {/* SUB-ABAS DE NAVEGAÇÃO DE PAUTAS */}
+          <div className="task-tabs-container">
+            <button
+              onClick={() => setTopicTab('active')}
+              className={`task-tab-btn ${topicTab === 'active' ? 'active' : ''}`}
+            >
+              Em Andamento ({activeTopics.length})
+            </button>
+
+            <button
+              onClick={() => setTopicTab('completed')}
+              className={`task-tab-btn ${topicTab === 'completed' ? 'active' : ''}`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 icon-emerald" />
+              <span>Concluídas ({completedTopics.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* BOTÃO "NOVA PAUTA" ALINHADO À DIREITA */}
+        {onOpenCreateModal && (
+          <button onClick={onOpenCreateModal} className="btn-topic-primary">
+            <Plus className="h-4 w-4" />
+            <span>Nova Pauta</span>
+          </button>
+        )}
+      </div>
+
+      {/* 3. CONTEÚDO DAS PAUTAS (EM ANDAMENTO x CONCLUÍDAS) */}
       {topicTab === 'active' && (
         <>
-          {/* PAINEL SUPERIOR: SELECIONAR PAUTA + ADICIONAR ITEM / CRIAR PAUTA */}
-          <div className="topic-selector-card">
-            <div className="topic-selector-header">
-              <div className="topic-select-group">
-                <label className="topic-select-label">Adicionar item na Pauta:</label>
-                <select
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="topic-select-input"
-                >
-                  {activeTopics.length === 0 ? (
-                    <option value="">Nenhuma pauta ativa</option>
-                  ) : (
-                    activeTopics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title} ({t.items?.filter(i => !i.is_completed).length || 0} pendentes)
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <button
-                onClick={() => setIsCreatingTopic(!isCreatingTopic)}
-                className="btn-topic-primary"
-              >
-                <FolderPlus className="h-4 w-4" />
-                <span>{isCreatingTopic ? 'Cancelar' : 'Nova Pauta'}</span>
-              </button>
-            </div>
-
-            {/* Form para Criar Nova Pauta */}
-            {isCreatingTopic && (
-              <form onSubmit={handleCreateTopic} className="topic-create-form">
-                <input
-                  type="text"
-                  placeholder="Nome da pauta (ex: Reunião Semanal, Diretoria...)"
-                  value={newTopicTitle}
-                  onChange={(e) => setNewTopicTitle(e.target.value)}
-                  className="topic-create-input"
-                  autoFocus
-                />
-                <button type="submit" className="btn-add-item">
-                  Criar
-                </button>
-              </form>
-            )}
-
-            {/* Input Rápido para a Pauta Selecionada */}
-            {activeTopics.length > 0 && (
-              <form onSubmit={handleAddItem} className="topic-item-form border-t border-slate-100 pt-3 mt-1">
-                <input
-                  type="text"
-                  placeholder="Digite o item para adicionar na pauta selecionada acima... (Pressione Enter)"
-                  value={newItemText}
-                  onChange={(e) => setNewItemText(e.target.value)}
-                  disabled={submittingItem}
-                  className="topic-item-input"
-                />
-                <button
-                  type="submit"
-                  disabled={submittingItem || !newItemText.trim() || !selectedTopicId}
-                  className="btn-add-item"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Adicionar</span>
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* GRADE DE PAUTAS ATIVAS */}
           {activeTopics.length === 0 ? (
             <div className="topics-empty-state">
               <MessageSquare className="h-10 w-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-600 font-medium">Nenhuma pauta em andamento</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Todas as pautas foram concluídas ou nenhuma foi criada ainda.
-              </p>
             </div>
           ) : (
             <div className="topics-grid">
-              {activeTopics.map((topic) => {
-                const pendingCount = topic.items?.filter(i => !i.is_completed).length || 0;
-                const completedCount = topic.items?.filter(i => i.is_completed).length || 0;
+              {activeTopics.map((topic) => (
+                <div key={topic.id} className="topic-active-card">
+                  <div className="topic-active-header">
+                    <h3 className="topic-active-title">{topic.title}</h3>
 
-                return (
-                  <div key={topic.id} className="topic-active-card">
-                    <div className="topic-active-header">
-                      <div>
-                        <h3 className="topic-active-title">{topic.title}</h3>
-                        <p className="topic-active-author">
-                          {pendingCount} pendentes • {completedCount} concluídos
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-1">
+                      {onOpenEditModal && (
+                        <button
+                          onClick={() => onOpenEditModal(topic)}
+                          className="btn-delete-icon"
+                          title="Editar Pauta"
+                        >
+                          <Pencil className="h-4 w-4 text-slate-600" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleToggleTopicStatus(topic)}
+                        className="btn-delete-icon hover:text-emerald-600"
+                        title="Concluir Pauta"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      </button>
                       <button
                         onClick={() => handleDeleteTopic(topic.id)}
                         className="btn-delete-icon"
@@ -374,61 +277,34 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-
-                    <div className="topic-items-list">
-                      {(!topic.items || topic.items.length === 0) ? (
-                        <div className="p-4 text-center text-slate-400 text-xs italic">
-                          Nenhum item adicionado nesta pauta.
-                        </div>
-                      ) : (
-                        topic.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`topic-item-row ${item.is_completed ? 'completed' : ''}`}
-                          >
-                            <button
-                              onClick={() => handleToggleItemStatus(item)}
-                              className="topic-item-button"
-                            >
-                              {item.is_completed ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                              ) : (
-                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
-                              )}
-                              <span className={`topic-item-text ${item.is_completed ? 'done' : ''}`}>
-                                {item.content}
-                              </span>
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="btn-delete-icon"
-                              title="Excluir item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
                   </div>
-                );
-              })}
+
+                  {/* Conteúdo em texto simples da pauta (com suporte a quebra de linha) */}
+                  <div className="p-4 bg-white flex-1">
+                    {topic.description ? (
+                      <p className="topic-card-text">
+                        {topic.description}
+                      </p>
+                    ) : (
+                      <span className="text-slate-400 text-sm italic">Sem conteúdo nesta pauta.</span>
+                    )}
+                  </div>
+
+                  
+                </div>
+              ))}
             </div>
           )}
         </>
       )}
 
-      {/* ABA 2: PAUTAS CONCLUÍDAS */}
+      {/* ABA DE CONCLUÍDAS */}
       {topicTab === 'completed' && (
         <div className="max-w-2xl mx-auto w-full">
           {completedTopics.length === 0 ? (
             <div className="topics-empty-state">
               <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
               <p className="text-slate-600 font-medium">Nenhuma pauta concluída no momento</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Quando todos os itens de uma pauta forem marcados, ela aparecerá aqui.
-              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -436,23 +312,18 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
                 <div key={topic.id} className="topic-active-card opacity-90">
                   <div className="topic-active-header bg-emerald-50/50">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded">
-                          Concluído
-                        </span>
-                        <h3 className="topic-active-title line-through text-slate-600">
-                          {topic.title}
-                        </h3>
-                      </div>
-                      <p className="topic-active-author mt-1">
-                        Todos os {topic.items?.length || 0} itens foram finalizados
-                      </p>
+                      <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded mr-2">
+                        Concluído
+                      </span>
+                      <h3 className="topic-active-title inline line-through text-slate-600">
+                        {topic.title}
+                      </h3>
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleReopenTopic(topic)}
-                        className="btn-delete-icon hover:text-blue-600"
+                        onClick={() => handleToggleTopicStatus(topic)}
+                        className="btn-delete-icon"
                         title="Reabrir Pauta"
                       >
                         <RotateCcw className="h-4 w-4 text-blue-600" />
@@ -467,15 +338,10 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
                     </div>
                   </div>
 
-                  <div className="topic-items-list">
-                    {topic.items?.map((item) => (
-                      <div key={item.id} className="topic-item-row completed">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                          <span className="topic-item-text done">{item.content}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="p-4">
+                    <p className="topic-card-text text-slate-600">
+                      {topic.description}
+                    </p>
                   </div>
                 </div>
               ))}
