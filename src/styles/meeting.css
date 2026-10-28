@@ -4,7 +4,7 @@
 
 /* Container Principal */
 .topics-container {
-  max-width: 72rem; /* Expandido para acomodar 2 colunas confortavelmente */
+  max-width: 72rem;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -20,10 +20,11 @@
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
   padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .topic-pending-header {
@@ -32,7 +33,7 @@
   justify-content: space-between;
 }
 
-/* Form de Inserção da Pendência */
+/* Form de Inserção da Pendência Global */
 .topic-item-form {
   display: flex;
   gap: 0.5rem;
@@ -53,38 +54,14 @@
 .topic-item-input:focus {
   border-color: #0f172a;
   background-color: #ffffff;
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
-.btn-add-item {
-  padding: 0.625rem 1rem;
-  background-color: #0f172a;
-  color: #ffffff;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.btn-add-item:hover {
-  background-color: #1e293b;
-}
-
-.btn-add-item:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Lista de Itens Pendentes */
+/* Lista de Itens Pendentes Globais */
 .topic-items-list {
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -114,9 +91,293 @@
 }
 
 /* ==========================================================================
-   2. BARRAS E BOTÕES DE AÇÃO DO QUADRO DE PAUTAS
+   FORMULÁRIO DE CRIAÇÃO DE PAUTA E COMPONENTES INTERNOS
    ========================================================================== */
 
+/* Card Container da Criação */
+.create-topic-card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Alinhamento de Rótulos e Campos */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.label-with-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Botão Preto "Ver lista de pendências" */
+.btn-pending-toggle {
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  margin: 10px;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-pending-toggle:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+/* Painel Retrátil da Lista de Pendências */
+.pending-selector-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.pending-selector-title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.pending-selector-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background-color: #ffffff;
+}
+
+/* Linha da Pendência com Separador e Hover mais escuro */
+.pending-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s ease;
+}
+
+.pending-selector-item:last-child {
+  border-bottom: none;
+}
+
+.pending-selector-item:hover {
+  background-color: #e2e8f0; /* Fica mais escuro ao passar o mouse */
+}
+
+.pending-item-text {
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* Botão Inserir dentro do item */
+.btn-insert-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.625rem;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-insert-pending:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+
+
+/* Botão Salvar Pauta (Preto) */
+.btn-save-topic {
+  padding: 0.5rem 1.25rem;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 10px;
+}
+
+.btn-save-topic:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.btn-save-topic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================================================
+   3. BARRA DE FERRAMENTAS E EDITOR DE TEXTO (TEXTAREA)
+   ========================================================================== */
+
+.text-editor-container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.text-editor-container:focus-within {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.text-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  background-color: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.toolbar-btn {
+  padding: 0.375rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.toolbar-btn:active {
+  background-color: #94a3b8;
+  color: #ffffff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 1.25rem;
+  background-color: #cbd5e1;
+  margin: 0 0.25rem;
+}
+
+.topic-textarea {
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0.75rem 1rem !important;
+  resize: vertical;
+  outline: none !important;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+.topic-textarea:focus {
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   4. ESTILIZAÇÃO COMPLETA DOS BOTÕES
+   ========================================================================== */
+
+/* Botão Principal de Ação (Adicionar, Salvar) */
+.btn-add-item,
+.btn-save-topic {
+  padding: 0.625rem 1.125rem;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-add-item:hover,
+.btn-save-topic:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.btn-add-item:disabled,
+.btn-save-topic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Botão Secundário / Cancelar */
+.btn-cancel-topic {
+  padding: 0.625rem 1rem;
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-topic:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Botão de Abrir Formulário de Nova Pauta */
 .btn-topic-primary {
   background-color: #0f172a;
   color: #ffffff;
@@ -125,11 +386,11 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .btn-topic-primary:hover {
@@ -137,6 +398,7 @@
   transform: translateY(-1px);
 }
 
+/* Ícones de Deletar / Editar / Ações Secundárias */
 .btn-delete-icon {
   padding: 0.375rem;
   color: #94a3b8;
@@ -144,7 +406,42 @@
   border: none;
   border-radius: 0.375rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
+}
+.btn-editar-icon {
+  padding: 0.375rem;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.btn-editar-icon:hover {
+  color: #447aef;
+  background-color: #d8d8ee;
+}
+.btn-concluir-icon {
+  padding: 0.375rem;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.btn-concluir-icon:hover {
+  color: #6cef44;
+  background-color: #daeed8;
 }
 
 .btn-delete-icon:hover {
@@ -153,8 +450,17 @@
 }
 
 /* ==========================================================================
-   3. QUADRO DE PAUTAS (GRID DE 2 COLUNAS)
+   5. BARRAS DE NAVEGAÇÃO E QUADRO DE PAUTAS (GRID DE 2 COLUNAS)
    ========================================================================== */
+
+.topics-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
 
 .topics-grid {
   display: grid;
@@ -164,7 +470,7 @@
 
 @media (min-width: 768px) {
   .topics-grid {
-    grid-template-columns: repeat(2, 1fr); /* Exatamente 2 reuniões por linha */
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -176,7 +482,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 100%; /* Faz os cards manterem a mesma altura na linha */
+  height: 100%;
 }
 
 .topic-active-header {
@@ -195,6 +501,17 @@
   margin: 0;
 }
 
+/* Exibição do Texto da Pauta */
+.topic-card-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.875rem;
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+  padding: 1rem;
+}
+
 /* Estado Vazio */
 .topics-empty-state {
   padding: 3rem 1.5rem;
@@ -203,24 +520,4 @@
   border-radius: 0.75rem;
   border: 1px dashed #cbd5e1;
   color: #64748b;
-}
-/* Cabeçalho da Seção de Pautas (Alinhamento em linha) */
-.topics-header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-/* Garante que o texto em parágrafos respeite as quebras de linha (Enter) */
-.topic-card-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 0.875rem;
-  color: #334155;
-  line-height: 1.5;
-  margin: 0;
-  padding: 20px;
 }
