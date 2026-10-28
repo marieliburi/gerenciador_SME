@@ -118,16 +118,24 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
     }
   };
 
-  // 2. Apagar Item da Lista de Pendências Manualmente
-  const handleDeletePendingItem = async (id: string) => {
-    try {
-      const { error } = await supabase.from('pending_items').delete().eq('id', id);
-      if (error) throw error;
-      setPendingItems(prev => prev.filter(item => item.id !== id));
-    } catch (err) {
-      console.error('Erro ao deletar pendência:', err);
-    }
-  };
+  // Apagar Item da Lista de Pendências Manualmente com Confirmação
+const handleDeletePendingItem = async (id: string) => {
+  const confirmed = window.confirm(
+    'Tem certeza de que deseja excluir este item da lista de pendências?\n\nEsta ação é irreversível.'
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await supabase.from('pending_items').delete().eq('id', id);
+    if (error) throw error;
+    
+    setPendingItems(prev => prev.filter(item => item.id !== id));
+  } catch (err) {
+    console.error('Erro ao deletar pendência:', err);
+    alert('Não foi possível excluir o item da lista.');
+  }
+};
 
   // 3. Inserir o texto da pendência na descrição da pauta em criação
   const handleAppendPendingToNewTopic = (content: string) => {
@@ -465,9 +473,9 @@ export default function MeetingTopicsView({ onFetchTopicsRef }: MeetingTopicsVie
       {/* FORMULÁRIO DE CRIAÇÃO DE PAUTA */}
       {isCreatingTopic && (
         <div className="create-topic-card">
-          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
+          <strong><h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
             Criar Nova Pauta
-          </h3>
+          </h3></strong>
 
           <form onSubmit={handleCreateTopic} className="space-y-4">
             <div className="form-group">
