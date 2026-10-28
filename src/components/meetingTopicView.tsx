@@ -15,8 +15,7 @@ import {
   Bold,
   Italic,
   List,
-  ListOrdered,
-  X
+  ListOrdered
 } from 'lucide-react';
 
 import '../styles/meeting.css';
