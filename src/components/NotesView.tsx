@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Plus,
@@ -12,12 +11,31 @@ import { supabase } from '../lib/supabaseClient';
 import type { Note } from '../types/note';
 import '../styles/notes.css';
 
+interface NoteWithDimensions extends Note {
+  width?: number;
+  height?: number;
+  position_order?: number;
+}
+
 export default function NotesView() {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<NoteWithDimensions[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Estados para redimensionamento
+  const [resizingNoteId, setResizingNoteId] = useState<string | null>(null);
+  const resizeStartRef = useRef<{
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
+
+  // Estados para reordenação via Drag & Drop no Alfinete
+  const [draggedNoteIndex, setDraggedNoteIndex] = useState<number | null>(null);
+  const [dragOverNoteIndex, setDragOverNoteIndex] = useState<number | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
 
@@ -48,23 +66,35 @@ export default function NotesView() {
   }, []);
 
   const fetchNotes = useCallback(async () => {
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const { data, error } = await supabase
+  try {
+    // Tenta buscar com a ordenação por posição
+    let { data, error } = await supabase
+      .from('quick_notes')
+      .select('*')
+      .order('position_order', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+
+    // Se falhar (por exemplo, coluna position_order ainda não criada no banco), faz a busca padrão
+    if (error) {
+      console.warn('Tentando busca padrão sem position_order:', error.message);
+      const fallback = await supabase
         .from('quick_notes')
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-
-      setNotes(data || []);
-    } catch (err) {
-      console.error('Erro ao buscar notas:', err);
-    } finally {
-      setLoading(false);
+      if (fallback.error) throw fallback.error;
+      data = fallback.data;
     }
-  }, []);
+
+    setNotes(data || []);
+  } catch (err) {
+    console.error('Erro ao buscar notas:', err);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchNotes();
@@ -83,43 +113,172 @@ export default function NotesView() {
     };
   }, [fetchNotes]);
 
-  const handleCreateNote = async (e: React.FormEvent) => {
+  // Redimensionamento sem sair do quadro
+  const handleResizeStart = (
+    e: React.MouseEvent,
+    noteId: string,
+    currentWidth: number = 220,
+    currentHeight: number = 220
+  ) => {
     e.preventDefault();
+    e.stopPropagation();
 
-    if (!content.trim()) return;
+    setResizingNoteId(noteId);
+    resizeStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: currentWidth,
+      startHeight: currentHeight,
+    };
+  };
 
-    setSubmitting(true);
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingNoteId || !resizeStartRef.current || !boardRef.current) return;
 
+      const { startX, startY, startWidth, startHeight } = resizeStartRef.current;
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+
+      // Obtém a largura útil do quadro descontando as margens
+      const boardWidth = boardRef.current.clientWidth - 40;
+
+      const newWidth = Math.min(Math.max(160, startWidth + deltaX), boardWidth);
+      const newHeight = Math.max(160, startHeight + deltaY);
+
+      setNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note.id === resizingNoteId
+            ? { ...note, width: newWidth, height: newHeight }
+            : note
+        )
+      );
+    };
+
+    const handleMouseUp = async () => {
+      if (!resizingNoteId) return;
+
+      const updatedNote = notes.find((n) => n.id === resizingNoteId);
+      const noteIdToUpdate = resizingNoteId;
+
+      setResizingNoteId(null);
+      resizeStartRef.current = null;
+
+      if (updatedNote && (updatedNote.width || updatedNote.height)) {
+        try {
+          await supabase
+            .from('quick_notes')
+            .update({
+              width: updatedNote.width,
+              height: updatedNote.height,
+            })
+            .eq('id', noteIdToUpdate);
+        } catch (err) {
+          console.error('Erro ao salvar dimensões da nota:', err);
+        }
+      }
+    };
+
+    if (resizingNoteId) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingNoteId, notes]);
+
+  // Drag & Drop no Alfinete para Mudar a Ordem
+  const handleDragStart = (index: number) => {
+    setDraggedNoteIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverNoteIndex(index);
+  };
+
+  const handleDrop = async (index: number) => {
+    if (draggedNoteIndex === null || draggedNoteIndex === index) {
+      setDraggedNoteIndex(null);
+      setDragOverNoteIndex(null);
+      return;
+    }
+
+    const updatedNotes = [...notes];
+    const [movedNote] = updatedNotes.splice(draggedNoteIndex, 1);
+    updatedNotes.splice(index, 0, movedNote);
+
+    // Atualiza o estado local imediatamente
+    setNotes(updatedNotes);
+    setDraggedNoteIndex(null);
+    setDragOverNoteIndex(null);
+
+    // Persiste a nova ordem no Supabase
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const authorName = user.email
-        ? user.email.split('@')[0]
-        : 'usuario';
-
-      const { error } = await supabase.from('quick_notes').insert([
-        {
-          content: content.trim(),
-          color: 'yellow',
-          created_by: user.id,
-          created_by_name: authorName,
-        },
-      ]);
-
-      if (error) throw error;
-
-      setContent('');
-      await fetchNotes();
+      const updates = updatedNotes.map((note, idx) =>
+        supabase
+          .from('quick_notes')
+          .update({ position_order: idx })
+          .eq('id', note.id)
+      );
+      await Promise.all(updates);
     } catch (err) {
-      console.error('Erro ao criar nota:', err);
-    } finally {
-      setSubmitting(false);
+      console.error('Erro ao salvar ordem das notas:', err);
     }
   };
+
+  const handleCreateNote = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!content.trim()) return;
+
+  setSubmitting(true);
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const authorName = user.email
+      ? user.email.split('@')[0]
+      : 'usuario';
+
+    // Inserção simplificada sem enviar width/height/position_order diretamente
+    const { error } = await supabase.from('quick_notes').insert([
+      {
+        content: content.trim(),
+        color: 'yellow',
+        created_by: user.id,
+        created_by_name: authorName,
+      },
+    ]);
+
+    if (error) throw error;
+
+    setContent('');
+    await fetchNotes();
+  } catch (err) {
+    console.error('Erro ao criar nota:', err);
+    alert('Não foi possível criar a nota.');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  // Se pressionar Enter sem a tecla Shift
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); // Evita a quebra de linha padrão
+    if (content.trim() && !submitting) {
+      handleCreateNote(e); // Submete o formulário
+    }
+  }
+};
 
   const handleToggleComplete = async (note: Note) => {
     try {
@@ -164,6 +323,7 @@ export default function NotesView() {
         <textarea
           rows={2}
           value={content}
+          onKeyDown={handleKeyDown}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Escreva um novo lembrete..."
           className="note-input-area"
@@ -180,7 +340,7 @@ export default function NotesView() {
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                <span>Adicionar Nota</span>
+                <span>Adicionar</span>
               </>
             )}
           </button>
@@ -190,9 +350,7 @@ export default function NotesView() {
       {/* Quadro de cortiça */}
       <div
         ref={boardRef}
-        className={`corkboard-container ${
-          isFullscreen ? 'corkboard-fullscreen' : ''
-        }`}
+        className={`corkboard-container ${isFullscreen ? 'corkboard-fullscreen' : ''}`}
       >
         <button
           type="button"
@@ -205,7 +363,6 @@ export default function NotesView() {
           ) : (
             <Maximize size={20} />
           )}
-          
         </button>
 
         {loading ? (
@@ -218,49 +375,73 @@ export default function NotesView() {
           </div>
         ) : (
           <div className="notes-grid">
-            {notes.map((note) => (
-              <div key={note.id}>
+            {notes.map((note, index) => {
+              const cardWidth = note.width || 220;
+              const cardHeight = note.height || 220;
+
+              return (
                 <div
-                  className={`postit-card ${
-                    note.is_completed ? 'completed' : ''
-                  }`}
+                  key={note.id}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={() => handleDrop(index)}
+                  className={`postit-wrapper ${dragOverNoteIndex === index ? 'drag-over' : ''}`}
                 >
-                  <div className="pin-red" />
+                  <div
+                    className={`postit-card ${note.is_completed ? 'completed' : ''}`}
+                    style={{
+                      width: `${cardWidth}px`,
+                      height: `${cardHeight}px`,
+                      maxWidth: '100%',
+                    }}
+                  >
+                    {/* Alfinete clicável e arrastável */}
+                    <div
+                      className="pin-red"
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      title="Arraste o alfinete para mudar a ordem do post-it"
+                    />
 
-                  <p className="postit-content">{note.content}</p>
+                    <p className="postit-content">{note.content}</p>
 
-                  <div className="postit-footer">
-                    <span className="postit-author">
-                      {note.created_by_name || 'usuario'}
-                    </span>
+                    <div className="postit-footer">
+                      <span className="postit-author">
+                        {note.created_by_name || 'usuario'}
+                      </span>
 
-                    <div className="postit-actions">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleComplete(note)}
-                        className="postit-action-btn"
-                        title={
-                          note.is_completed
-                            ? 'Reabrir nota'
-                            : 'Concluir nota'
-                        }
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
+                      <div className="postit-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleComplete(note)}
+                          className="postit-action-btn"
+                          title={note.is_completed ? 'Reabrir nota' : 'Concluir nota'}
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="postit-action-btn"
-                        title="Excluir nota"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="postit-action-btn"
+                          title="Excluir nota"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Puxador para redimensionamento */}
+                    <div
+                      className="postit-resize-handle"
+                      onMouseDown={(e) =>
+                        handleResizeStart(e, note.id, cardWidth, cardHeight)
+                      }
+                      title="Arraste para redimensionar"
+                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -827,3 +827,54 @@
 .task-tab-btn.active .icon-emerald {
   color: #10b981;
 }
+
+/* Container da opção "Criar Nota Automática" */
+.note-checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Estilização do Checkbox */
+.note-checkbox-input {
+  height: 1rem;
+  width: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  cursor: pointer;
+  accent-color: #0f172a; /* Cor preta quando selecionado */
+  transition: all 0.15s ease;
+}
+
+.note-checkbox-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+/* Rótulo com Ícone e Texto */
+.note-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.note-checkbox-label:hover {
+  color: #0f172a;
+}
+
+/* Destaque sutil para o ícone de nota rápida */
+.note-checkbox-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}

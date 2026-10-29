@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Task, TaskCategory, TaskPriority } from '../types/task';
-import { X, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2, StickyNote } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskCreated: () => void;
-  taskToEdit?: Task | null; // Tarefa enviada para edição (opcional)
+  taskToEdit?: Task | null;
 }
 
 export default function TaskModal({
@@ -22,6 +22,7 @@ export default function TaskModal({
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [cardColor, setCardColor] = useState<string>('yellow');
   const [dueDate, setDueDate] = useState('');
+  const [createNote, setCreateNote] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -32,8 +33,8 @@ export default function TaskModal({
       setCategory(taskToEdit.category || 'user_support');
       setPriority(taskToEdit.priority || 'medium');
       setCardColor(taskToEdit.card_color || 'yellow');
+      setCreateNote(false);
 
-      // Formata a data ISO para YYYY-MM-DDTHH:mm para o input datetime-local
       if (taskToEdit.due_date) {
         const d = new Date(taskToEdit.due_date);
         const pad = (num: number) => String(num).padStart(2, '0');
@@ -45,13 +46,13 @@ export default function TaskModal({
         setDueDate('');
       }
     } else {
-      // Reseta para novo registro
       setTitle('');
       setDescription('');
       setCategory('user_support');
       setPriority('medium');
       setCardColor('yellow');
       setDueDate('');
+      setCreateNote(false);
     }
   }, [taskToEdit, isOpen]);
 
@@ -78,7 +79,7 @@ export default function TaskModal({
         category === 'system_update' && dueDate ? new Date(dueDate).toISOString() : null;
 
       if (taskToEdit) {
-        // ATUALIZAR TAREFA EXISTENTE
+        // Atualiza a tarefa existente
         const { error } = await supabase
           .from('tasks')
           .update({
@@ -93,8 +94,8 @@ export default function TaskModal({
 
         if (error) throw error;
       } else {
-        // CRIAR NOVA TAREFA
-        const { error } = await supabase.from('tasks').insert([
+        // 1. Inserção da nova tarefa
+        const { error: taskError } = await supabase.from('tasks').insert([
           {
             title: title.trim(),
             description: description.trim() || null,
@@ -108,7 +109,27 @@ export default function TaskModal({
           },
         ]);
 
-        if (error) throw error;
+        if (taskError) throw taskError;
+
+        // 2. Junção de Título e Descrição para o campo content de quick_notes
+        if (createNote) {
+          const combinedContent = description.trim()
+            ? `${title.trim()}\n\n${description.trim()}`
+            : title.trim();
+
+          const { error: noteError } = await supabase.from('quick_notes').insert([
+            {
+              content: combinedContent,
+              color: 'yellow',
+              created_by: user.id,
+              created_by_name: authorName,
+            },
+          ]);
+
+          if (noteError) {
+            console.error('Erro ao inserir nota na tabela quick_notes:', noteError);
+          }
+        }
       }
 
       onTaskCreated();
@@ -213,6 +234,22 @@ export default function TaskModal({
               ))}
             </div>
           </div>
+
+          {!taskToEdit && (
+            <div className="note-checkbox-container">
+              <input
+                type="checkbox"
+                id="createNoteCheckbox"
+                checked={createNote}
+                onChange={(e) => setCreateNote(e.target.checked)}
+                className="note-checkbox-input"
+              />
+              <label htmlFor="createNoteCheckbox" className="note-checkbox-label">
+                <StickyNote className="note-checkbox-icon" />
+                <span>Criar nota rápida no quadro automaticamente</span>
+              </label>
+            </div>
+          )}
 
           <div className="modal-footer">
             <button type="button" onClick={onClose} className="btn-modal-cancel">
