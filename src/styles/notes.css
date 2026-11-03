@@ -152,15 +152,34 @@
   border-radius: 50%;
 }
 
-/* Efeito Concluído */
+/* Restaura o efeito do post-it concluído como era antes */
 .postit-card.completed {
   opacity: 0.7;
   filter: grayscale(0.2);
 }
 
 .postit-card.completed .postit-content {
-  text-decoration: line-through;
-  color: #4b5563;
+  text-decoration: none;
+  color: #0f172a;
+  
+  /* Aumenta o espaçamento entre as linhas para que as faixas não se juntem */
+  line-height: 1.8;
+  
+  /* Cria uma faixa verde cobrindo apenas a parte inferior de cada linha */
+  background-image: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(128, 235, 167, 0.85) 50%
+  );
+  
+  /* Define a altura exata da faixa para cada linha do texto */
+  background-size: 100% 1.8em;
+  background-repeat: repeat-y;
+  
+  display: inline;
+  padding: 0.1rem 0.2rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .postit-content {
