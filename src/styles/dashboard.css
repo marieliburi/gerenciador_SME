@@ -880,3 +880,25 @@
   width: 0.875rem;
   height: 0.875rem;
 }
+.dash-user-badge {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.dash-user-badge:hover {
+  background-color: #d9dbddc5;
+  transform: translateY(-1px);
+}
+
+.dash-user-badge.active-user {
+  background-color: #ffffff;
+  color: #1a4b8c;
+}
+
+.dash-user-badge.active-user svg {
+  color: #1a4b8c !important;
+}
+.dash-user-badge svg {
+  color: #fff; /* Azul (ou a cor HEX/RGB que desejar) */
+}

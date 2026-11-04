@@ -237,16 +237,16 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 14px;
-  border: 1px solid #1a4b8c;
+  border: 1px solid #8c4d1a;
   border-radius: 8px;
-  background: rgba(26, 75, 140, 0.85);
-  color: #ffffff;
+  background: #a58561af;
+  color: #6d3d07;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .fullscreen-button:hover {
-  background: #1a4b8c;
+  background: rgba(252, 251, 251, 0.459);
 }
 
 .corkboard-fullscreen {

@@ -10,6 +10,7 @@ import MeetingTopicsView from './components/meetingTopicView';
 import MeetingTopicModal from './components/meetingTopicModel';
 import type { MeetingTopic } from './types/meetingTopic';
 import NotesView from './components/NotesView';
+import ProfileView from './components/ProfileView';
 import { StickyNote } from 'lucide-react';
 import {
   MessageSquare,
@@ -38,8 +39,7 @@ export default function App() {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   // Navegação Principal de telas: 'kanban' | 'meeting_topics' | 'notes'
-  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'notes'>('kanban');
-
+  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'notes' | 'profile'>('kanban');
   // Sub-navegação interna no Quadro de Tarefas: 'active' | 'completed'
   const [taskTab, setTaskTab] = useState<'active' | 'completed'>('active');
 
@@ -245,7 +245,11 @@ export default function App() {
       {/* CABEÇALHO */}
       <header className="dash-header">
         <div className="dash-header-container">
-          <div className="dash-user-badge">
+          <div
+            onClick={() => setActiveNav('profile')}
+            className={`dash-user-badge cursor-pointer hover:bg-slate-200 transition-colors ${activeNav === 'profile' ? 'active-user' : ''}`}
+            title="Ver Perfil / Editar Senha"
+          >
             <User className="h-4 w-4 text-slate-500" />
             <span>{currentUserName}</span>
           </div>
@@ -301,6 +305,13 @@ export default function App() {
               setIsMeetingTopicModalOpen(true);
             }}
             onFetchTopicsRef={(fetchFn) => setFetchMeetingTopicsFn(() => fetchFn)}
+          />
+        )}
+
+        {activeNav === 'profile' && (
+          <ProfileView
+            userEmail={session.user.email || ''}
+            onAccountDeleted={() => void supabase.auth.signOut()}
           />
         )}
 
@@ -450,13 +461,12 @@ export default function App() {
 
                                 <div className="task-card-footer">
                                   <span
-                                    className={`priority-pill ${
-                                      task.priority === 'high'
-                                        ? 'high'
-                                        : task.priority === 'low'
-                                          ? 'low'
-                                          : 'medium'
-                                    }`}
+                                    className={`priority-pill ${task.priority === 'high'
+                                      ? 'high'
+                                      : task.priority === 'low'
+                                        ? 'low'
+                                        : 'medium'
+                                      }`}
                                   >
                                     {task.priority === 'high'
                                       ? 'Alta prioridade'
@@ -563,9 +573,8 @@ export default function App() {
                                       </div>
                                       {daysInfo && (
                                         <span
-                                          className={`days-badge ${
-                                            daysInfo.isLate ? 'late' : ''
-                                          }`}
+                                          className={`days-badge ${daysInfo.isLate ? 'late' : ''
+                                            }`}
                                         >
                                           {daysInfo.text}
                                         </span>
@@ -576,13 +585,12 @@ export default function App() {
 
                                 <div className="task-card-footer">
                                   <span
-                                    className={`priority-pill ${
-                                      task.priority === 'high'
-                                        ? 'high'
-                                        : task.priority === 'low'
-                                          ? 'low'
-                                          : 'medium'
-                                    }`}
+                                    className={`priority-pill ${task.priority === 'high'
+                                      ? 'high'
+                                      : task.priority === 'low'
+                                        ? 'low'
+                                        : 'medium'
+                                      }`}
                                   >
                                     {task.priority === 'high'
                                       ? 'Alta prioridade'
