@@ -291,9 +291,9 @@
   border-bottom-color: rgba(0, 0, 0, 0.7);
 }
 
-/* Botão "Adicionar Nota" (Azul corporativo, seguindo a identidade do design system) */
+/* Botão "Adicionar Nota" */
 .btn-nova-tarefa {
-  background-color: #1a4b8c;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
   border: none;
   padding: 0.5rem 1rem;

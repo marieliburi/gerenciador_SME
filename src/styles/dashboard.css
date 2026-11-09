@@ -39,7 +39,7 @@
 .sme-icon-btn {
   background: none;
   border: none;
-  color: #2563eb;
+  color: rgb(37, 95, 176);
   cursor: pointer;
   padding: 0.375rem;
   border-radius: 0.5rem;
@@ -102,7 +102,7 @@
   color: #ffffff !important;
 }
 
-/* 2. Banner Principal (Azul Corporativo) */
+/* 2. Banner Principal */
 .sme-welcome-banner {
   width: 100%;
   background-color: rgb(37, 95, 176);
@@ -111,6 +111,7 @@
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  margin-bottom: 10px;
 }
 
 .sme-welcome-title {
@@ -389,7 +390,7 @@
 }
 
 .task-tab-btn.active {
-  background-color: #1a4b8c;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
   box-shadow: 0 1px 3px rgba(26, 75, 140, 0.3);
 }
@@ -432,7 +433,7 @@
 }
 
 .column-banner.siguescola {
-  background-color: #2e3785;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
 }
 

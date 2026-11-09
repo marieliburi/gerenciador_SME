@@ -331,7 +331,7 @@
 .btn-add-item,
 .btn-save-topic {
   padding: 0.625rem 1.125rem;
-  background-color: #1a4b8c;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
   border: none;
   border-radius: 0.5rem;
@@ -379,7 +379,7 @@
 
 /* Botão de Abrir Formulário de Nova Pauta */
 .btn-topic-primary {
-  background-color: #1a4b8c;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
   border: none;
   padding: 0.5rem 1rem;
