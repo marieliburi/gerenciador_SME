@@ -11,99 +11,159 @@
   flex-direction: column;
 }
 
-/* ==========================================
-   HEADER SUPERIOR E NAVEGAÇÃO
-   ========================================== */
-.dash-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background-color: #1a4b8c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 1px 3px rgba(26, 75, 140, 0.06);
-}
+/* ==========================================================================
+   HEADER SUPERIOR E BREADCRUMB (LAYOUT SISTEMA SME)
+   ========================================================================== */
 
-.dash-header-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0.875rem 1.5rem;
+/* 1. Header / Topbar Branca */
+.sme-topbar {
+  width: 100%;
+  height: 3.5rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
-/* Badge do Usuário (Esquerda) */
-.dash-user-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.875rem;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border-radius: 0.75rem;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: background-color 0.2s ease;
-}
-
-/* Bloco da Direita (Menu + Sair) */
-.dash-header-right {
+/* Lado Esquerdo - Ícones e Logos */
+.sme-topbar-left {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-/* Links de Navegação */
-.dash-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.75);
-  background: transparent;
+.sme-icon-btn {
+  background: none;
   border: none;
+  color: #2563eb;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-}
-
-/* Estado Ativo: Botão Branco Sólido */
-.nav-link.active-black {
-  background-color: #ffffff !important;
-  color: #1a4b8c !important;
-  box-shadow: 0 2px 4px rgba(26, 75, 140, 0.15);
-}
-
-/* Botão Logout */
-.btn-logout {
-  padding: 0.5rem;
-  color: rgba(255, 255, 255, 0.75);
-  background: transparent;
-  border: none;
-  border-radius: 0.625rem;
-  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
 }
 
-.btn-logout:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.sme-icon-btn:hover {
+  background-color: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.sme-brand-logos {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid #e2e8f0;
+}
+
+.sme-logo-img {
+  height: 2.25rem;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Lado Direito - Notificações, Apps e Perfil */
+.sme-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Ícone do Boneco de Usuário (Círculo Azul) */
+.sme-user-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background-color: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid #2563eb;
+  transition: all 0.2s ease;
+}
+
+.sme-user-avatar:hover {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  transform: scale(1.05);
+}
+
+.sme-user-avatar svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: #ffffff !important;
+}
+
+/* 2. Banner Principal (Azul Corporativo) */
+.sme-welcome-banner {
+  width: 100%;
+  background-color: #2563eb;
+  color: #ffffff;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.sme-welcome-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+/* 3. Sub-header / Faixa Secundária (Azul Claro) */
+.sme-sub-header {
+  width: 100%;
+  background-color: #93c5fd;
+  padding: 0.625rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-sizing: border-box;
+}
+
+/* Tag / Pílula de Caminho */
+.sme-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.sme-nav-pill:hover {
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.sme-nav-pill.active {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+.sme-nav-pill.active svg {
   color: #ffffff;
 }
 
@@ -119,7 +179,6 @@
   box-sizing: border-box;
 }
 
-/* Título e Subtítulo */
 .dash-page-title {
   font-size: 1.625rem;
   font-weight: 800;
@@ -134,8 +193,97 @@
   margin: 0 0 1.75rem 0;
 }
 
+/* ==========================================================================
+   CARDS DA TELA INICIAL (IMAGENS MENORES E CENTRALIZADAS)
+   ========================================================================== */
+.home-modules-container {
+  max-width: 60rem; /* ~960px */
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.home-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .home-modules-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Card Container */
+.home-module-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.home-module-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -5px rgba(37, 99, 235, 0.15);
+  border-color: #2563eb;
+}
+
+/* Container da Imagem (Menor e Centralizada) */
+.module-image-wrapper {
+  width: 100%;
+  height: 8.5rem; /* Altura reduzida para deixar a imagem menor */
+  overflow: hidden;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem; /* Margem interna para afastar das bordas */
+  box-sizing: border-box;
+}
+
+.module-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* Garante que a imagem fique inteira, menor e sem cortar */
+  transition: transform 0.3s ease;
+}
+
+.home-module-card:hover .module-image {
+  transform: scale(1.08);
+}
+
+/* Rodapé do Card com o Título */
+.module-card-footer {
+  padding: 0.875rem 1rem;
+  text-align: center;
+  background-color: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  transition: background-color 0.2s ease;
+}
+
+.home-module-card:hover .module-card-footer {
+  background-color: #eff6ff;
+}
+
+.module-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.05em;
+  transition: color 0.2s ease;
+}
+
+.home-module-card:hover .module-title {
+  color: #2563eb;
+}
+
 /* ==========================================
-   CARDS DE MÉTRICAS (SUPERIORES)
+   CARDS DE MÉTRICAS (SUPERIORES KANBAN)
    ========================================== */
 .metrics-grid {
   display: grid;
@@ -214,6 +362,40 @@
 .metric-icon-box.purple {
   background-color: #f5f3ff;
   color: #8b5cf6;
+}
+
+/* ==========================================
+   SUB-ABAS KANBAN (EM ANDAMENTO x CONCLUÍDAS)
+   ========================================== */
+.task-tabs-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  color: #8896a7;
+  transition: all 0.2s ease-in-out;
+}
+
+.task-tab-btn.active {
+  background-color: #1a4b8c;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(26, 75, 140, 0.3);
+}
+
+.task-tab-btn.active .icon-emerald {
+  color: #10b981;
 }
 
 /* ==========================================
@@ -361,34 +543,12 @@
   box-shadow: 0 4px 12px rgba(26, 75, 140, 0.08);
 }
 
-.task-card.expanded {
-  transform: scale(1.015);
-  box-shadow: 0 12px 32px rgba(26, 75, 140, 0.12);
-  border-width: 1.5px;
-  z-index: 10;
-}
-
 /* Variações de Cores dos Cards */
-.task-card.yellow {
-  background-color: #fefce8;
-  border-color: #fef08a;
-}
-.task-card.green {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-}
-.task-card.red {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-}
-.task-card.blue {
-  background-color: #f0f9ff;
-  border-color: #bae6fd;
-}
-.task-card.purple {
-  background-color: #faf5ff;
-  border-color: #e9d5ff;
-}
+.task-card.yellow { background-color: #fefce8; border-color: #fef08a; }
+.task-card.green { background-color: #f0fdf4; border-color: #bbf7d0; }
+.task-card.red { background-color: #fef2f2; border-color: #fecaca; }
+.task-card.blue { background-color: #f0f9ff; border-color: #bae6fd; }
+.task-card.purple { background-color: #faf5ff; border-color: #e9d5ff; }
 
 /* Tag Superior no Card */
 .task-tag {
@@ -449,20 +609,7 @@
   line-height: 1.4;
 }
 
-/* Detalhes Expandidos (Prazo/Calendário) */
-.task-card-expanded-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(4px);
-  border-radius: 0.625rem;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  margin-top: 0.25rem;
-  animation: fadeIn 0.2s ease-out;
-}
-
+/* Detalhes de Prazo */
 .due-date-box {
   display: flex;
   align-items: center;
@@ -471,12 +618,6 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: #334155;
-}
-
-.due-date-box.empty {
-  color: #8896a7;
-  font-weight: 500;
-  font-style: italic;
 }
 
 .due-date-info {
@@ -499,33 +640,6 @@
   background-color: #ffe4e6;
   color: #be123c;
   border-color: #fecdd3;
-}
-
-.expanded-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: 0.375rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.btn-edit-card {
-  background-color: #1a4b8c;
-  color: #ffffff;
-  border: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  transition: background-color 0.2s ease;
-}
-
-.btn-edit-card:hover {
-  background-color: #153d73;
 }
 
 /* Rodapé do Card */
@@ -553,29 +667,8 @@
   font-weight: 500;
 }
 
-.btn-concluir-card {
-  background-color: #ffffff;
-  border: 1px solid #c5cdd8;
-  color: #334155;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.3rem 0.65rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  display: flex; /* Corrigido de font-flex */
-  align-items: center;
-  gap: 0.25rem;
-  transition: all 0.2s ease;
-}
-
-.btn-concluir-card:hover {
-  background-color: #10b981;
-  color: #ffffff;
-  border-color: #10b981;
-}
-
 /* ==========================================
-   MODAL DE CRIAÇÃO E EDIÇÃO (GLASSMORPHISM)
+   MODAL DE CRIAÇÃO E EDIÇÃO DE TAREFAS
    ========================================== */
 .modal-overlay {
   position: fixed;
@@ -685,7 +778,7 @@
   resize: none;
 }
 
-/* Seletor de Cores */
+/* Seletor de Cores no Modal */
 .color-picker-grid {
   display: flex;
   gap: 0.625rem;
@@ -702,10 +795,7 @@
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
-.color-option:hover {
-  transform: scale(1.1);
-}
-
+.color-option:hover { transform: scale(1.1); }
 .color-option.selected {
   transform: scale(1.15);
   border-color: #1a4b8c;
@@ -769,6 +859,37 @@
   cursor: not-allowed;
 }
 
+/* Checkbox "Criar Nota Automática" */
+.note-checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f0f4f8;
+}
+
+.note-checkbox-input {
+  height: 1rem;
+  width: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #c5cdd8;
+  color: #1a4b8c;
+  cursor: pointer;
+  accent-color: #1a4b8c;
+}
+
+.note-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
 /* ==========================================
    ANIMAÇÕES E RESPONSIVIDADE
    ========================================== */
@@ -789,116 +910,4 @@
   .kanban-grid {
     grid-template-columns: repeat(1, 1fr);
   }
-}
-
-
-/* Container dos botões de sub-abas */
-.task-tabs-container {
-  display: flex;
-  padding-bottom: 15px;
-  border-radius: 8px;
-  gap: 4px;
-}
-
-/* Estilo base dos botões */
-.task-tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: 0.75rem; /* 12px */
-  font-weight: 600;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background-color: transparent;
-  color: #8896a7; /* Cor do texto quando inativo */
-  transition: all 0.2s ease-in-out;
-}
-
-
-
-/* Estado ATIVO (Fundo corporativo azul, letra branca e destaque) */
-.task-tab-btn.active {
-  background-color: #1a4b8c;
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(26, 75, 140, 0.3);
-}
-
-/* Ajuste de cor do ícone no botão ativo */
-.task-tab-btn.active .icon-emerald {
-  color: #10b981;
-}
-
-/* Container da opção "Criar Nota Automática" */
-.note-checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid #f0f4f8;
-}
-
-/* Estilização do Checkbox */
-.note-checkbox-input {
-  height: 1rem;
-  width: 1rem;
-  border-radius: 0.25rem;
-  border: 1px solid #c5cdd8;
-  color: #1a4b8c;
-  cursor: pointer;
-  accent-color: #1a4b8c; /* Cor corporativa quando selecionado */
-  transition: all 0.2s ease;
-}
-
-.note-checkbox-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(26, 75, 140, 0.15);
-}
-
-/* Rótulo com Ícone e Texto */
-.note-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  font-size: 14px;
-  color: #334155;
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.2s ease;
-}
-
-.note-checkbox-label:hover {
-  color: #1a2332;
-}
-
-/* Destaque sutil para o ícone de nota rápida */
-.note-checkbox-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-.dash-user-badge {
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.2s ease;
-}
-
-.dash-user-badge:hover {
-  background-color: #d9dbddc5;
-  transform: translateY(-1px);
-}
-
-.dash-user-badge.active-user {
-  background-color: #ffffff;
-  color: #1a4b8c;
-}
-
-.dash-user-badge.active-user svg {
-  color: #1a4b8c !important;
-}
-.dash-user-badge svg {
-  color: #fff; /* Azul (ou a cor HEX/RGB que desejar) */
 }

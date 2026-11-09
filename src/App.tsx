@@ -11,10 +11,11 @@ import MeetingTopicModal from './components/meetingTopicModel';
 import type { MeetingTopic } from './types/meetingTopic';
 import NotesView from './components/NotesView';
 import ProfileView from './components/ProfileView';
-import { StickyNote } from 'lucide-react';
+
 import {
-  MessageSquare,
+  Home,
   LogOut,
+  User,
   Loader2,
   Plus,
   CheckCircle2,
@@ -26,9 +27,13 @@ import {
   Check,
   Calendar,
   Pencil,
-  User,
+  MessageSquare,
+  StickyNote,
   LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
+
+type NavType = 'home' | 'kanban' | 'meeting_topics' | 'notes' | 'profile';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -38,8 +43,24 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
-  // Navegação Principal de telas: 'kanban' | 'meeting_topics' | 'notes'
-  const [activeNav, setActiveNav] = useState<'kanban' | 'meeting_topics' | 'notes' | 'profile'>('kanban');
+  // Navegação Principal com persistência no localStorage
+  const [activeNav, setActiveNav] = useState<NavType>(() => {
+    const savedNav = localStorage.getItem('sme_active_nav') as NavType;
+    return savedNav || 'home';
+  });
+
+  // Função auxiliar para mudar a tela e guardar a preferência
+  const handleNavigate = (nav: NavType) => {
+    setActiveNav(nav);
+    localStorage.setItem('sme_active_nav', nav);
+  };
+
+  // Função de encerramento de sessão limpando a rota salva
+  const handleLogout = async () => {
+    localStorage.removeItem('sme_active_nav');
+    await supabase.auth.signOut();
+  };
+
   // Sub-navegação interna no Quadro de Tarefas: 'active' | 'completed'
   const [taskTab, setTaskTab] = useState<'active' | 'completed'>('active');
 
@@ -222,6 +243,7 @@ export default function App() {
   }
 
   const currentUserName = session.user.email?.split('@')[0] || 'usuario';
+  const firstName = currentUserName.charAt(0).toUpperCase() + currentUserName.slice(1);
 
   const totalTasks = tasks.length;
   const userSupportTasks = tasks.filter(
@@ -242,58 +264,143 @@ export default function App() {
 
   return (
     <div className="dashboard-page">
-      {/* CABEÇALHO */}
-      <header className="dash-header">
-        <div className="dash-header-container">
-          <div
-            onClick={() => setActiveNav('profile')}
-            className={`dash-user-badge cursor-pointer hover:bg-slate-200 transition-colors ${activeNav === 'profile' ? 'active-user' : ''}`}
-            title="Ver Perfil / Editar Senha"
-          >
-            <User className="h-4 w-4 text-slate-500" />
-            <span>{currentUserName}</span>
-          </div>
+      {/* CABEÇALHO INSPIRADO NO SISTEMA SME */}
+      <header className="w-full">
+        {/* 1. Navbar Branca Superior */}
+        <div className="sme-topbar">
+          <div className="sme-topbar-left">
+            <button onClick={() => handleNavigate('home')} className="sme-icon-btn" title="Ir para a Tela Inicial">
+              <Home size={22} />
+            </button>
 
-          <div className="dash-header-right">
-            <nav className="dash-nav-links">
-              <button
-                onClick={() => setActiveNav('kanban')}
-                className={`nav-link ${activeNav === 'kanban' ? 'active-black' : ''}`}
-              >
-                <LayoutGrid className="h-4 w-4" />
-                <span>Tarefas</span>
-              </button>
-
-              <button
-                onClick={() => setActiveNav('meeting_topics')}
-                className={`nav-link ${activeNav === 'meeting_topics' ? 'active-black' : ''}`}
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>Pautas</span>
-              </button>
-
-              <button
-                onClick={() => setActiveNav('notes')}
-                className={`nav-link ${activeNav === 'notes' ? 'active-black' : ''}`}
-              >
-                <StickyNote className="h-4 w-4" />
-                <span>Notas</span>
-              </button>
-            </nav>
-
-            <button
-              onClick={() => void supabase.auth.signOut()}
-              className="btn-logout"
-              title="Sair da conta"
-            >
-              <LogOut className="h-4 w-4" />
+            <button onClick={() => void handleLogout()} className="sme-icon-btn" title="Sair do Sistema">
+              <LogOut size={22} />
             </button>
           </div>
+
+          <div className="sme-topbar-right">
+            {/* Avatar do Usuário (Círculo Azul) */}
+            <div
+              onClick={() => handleNavigate('profile')}
+              className="sme-user-avatar"
+              title={`Perfil de ${currentUserName}`}
+            >
+              <User />
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Banner Azul Corporativo de Boas-Vindas */}
+        <div className="sme-welcome-banner">
+          <h1 className="sme-welcome-title">
+            <span>👋</span>
+            <span>Olá, {firstName}</span>
+          </h1>
+        </div>
+
+        {/* 3. Sub-header (Caminho / Breadcrumb Dinâmico) */}
+        <div className="sme-sub-header flex items-center gap-2">
+          <button
+            onClick={() => handleNavigate('home')}
+            className={`sme-nav-pill ${activeNav === 'home' ? 'active' : ''}`}
+          >
+            <Home size={14} />
+            <span>INÍCIO</span>
+          </button>
+
+          {activeNav === 'kanban' && (
+            <>
+              <ChevronRight size={14} className="text-slate-500" />
+              <div className="sme-nav-pill active">
+                <LayoutGrid size={14} />
+                <span>QUADRO DE TAREFAS</span>
+              </div>
+            </>
+          )}
+
+          {activeNav === 'notes' && (
+            <>
+              <ChevronRight size={14} className="text-slate-500" />
+              <div className="sme-nav-pill active">
+                <StickyNote size={14} />
+                <span>NOTAS RÁPIDAS</span>
+              </div>
+            </>
+          )}
+
+          {activeNav === 'meeting_topics' && (
+            <>
+              <ChevronRight size={14} className="text-slate-500" />
+              <div className="sme-nav-pill active">
+                <MessageSquare size={14} />
+                <span>PAUTAS DE REUNIÃO</span>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
-      {/* CONTEÚDO PRINCIPAL */}
+      {/* CONTEÚDO PRINCIPAL DA APLICAÇÃO */}
       <main className="dash-content">
+        {/* TELA INICIAL (CARDS COM IMAGEM E TÍTULO) */}
+        {activeNav === 'home' && (
+          <div className="home-modules-container">
+            <div className="home-modules-grid">
+              {/* Card 1: Tarefas */}
+              <div
+                onClick={() => handleNavigate('kanban')}
+                className="home-module-card group"
+              >
+                <div className="module-image-wrapper">
+                  <img
+                    src="/images/kanban.png"
+                    alt="Tarefas"
+                    className="module-image"
+                  />
+                </div>
+                <div className="module-card-footer">
+                  <span className="module-title">TAREFAS</span>
+                </div>
+              </div>
+
+              {/* Card 2: Notas Rápidas */}
+              <div
+                onClick={() => handleNavigate('notes')}
+                className="home-module-card group"
+              >
+                <div className="module-image-wrapper">
+                  <img
+                    src="/images/postit.png"
+                    alt="Notas Rápidas"
+                    className="module-image"
+                  />
+                </div>
+                <div className="module-card-footer">
+                  <span className="module-title">NOTAS RÁPIDAS</span>
+                </div>
+              </div>
+
+              {/* Card 3: Pautas de Reunião */}
+              <div
+                onClick={() => handleNavigate('meeting_topics')}
+                className="home-module-card group"
+              >
+                <div className="module-image-wrapper">
+                  <img
+                    src="/images/reuniao.png"
+                    alt="Pautas"
+                    className="module-image"
+                  />
+                </div>
+                <div className="module-card-footer">
+                  <span className="module-title">PAUTAS DE REUNIÃO</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TELA DE PAUTAS */}
         {activeNav === 'meeting_topics' && (
           <MeetingTopicsView
             onOpenCreateModal={() => {
@@ -308,22 +415,23 @@ export default function App() {
           />
         )}
 
+        {/* TELA DE PERFIL */}
         {activeNav === 'profile' && (
           <ProfileView
             userEmail={session.user.email || ''}
-            onAccountDeleted={() => void supabase.auth.signOut()}
+            onAccountDeleted={() => void handleLogout()}
           />
         )}
 
+        {/* TELA DE NOTAS */}
         {activeNav === 'notes' && <NotesView />}
 
-        {/* MÓDULO DE TAREFAS */}
+        {/* TELA DE TAREFAS (KANBAN) */}
         {activeNav === 'kanban' && (
           <>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="dash-page-title mb-0">Quadro de tarefas</h2>
+              <h2 className="dash-page-title mb-0">Quadro de Tarefas</h2>
 
-              {/* CONTROLE SUB-ABAS INTERNAS (EM ANDAMENTO x CONCLUÍDAS) */}
               <div className="task-tabs-container">
                 <button
                   onClick={() => setTaskTab('active')}
@@ -342,7 +450,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* SEÇÃO 1: TAREFAS EM ANDAMENTO (QUADRO KANBAN) */}
+            {/* TAREFAS EM ANDAMENTO */}
             {taskTab === 'active' && (
               <>
                 <div className="metrics-grid">
@@ -402,7 +510,7 @@ export default function App() {
                         <div className="column-banner-title">
                           <Clock className="h-5 w-5" />
                           <div>
-                            <h3>Atendimento ao usuário</h3>
+                            <h3>Atendimento ao Usuário</h3>
                           </div>
                         </div>
                         <div className="column-banner-actions">
@@ -461,18 +569,19 @@ export default function App() {
 
                                 <div className="task-card-footer">
                                   <span
-                                    className={`priority-pill ${task.priority === 'high'
-                                      ? 'high'
-                                      : task.priority === 'low'
+                                    className={`priority-pill ${
+                                      task.priority === 'high'
+                                        ? 'high'
+                                        : task.priority === 'low'
                                         ? 'low'
                                         : 'medium'
-                                      }`}
+                                    }`}
                                   >
                                     {task.priority === 'high'
                                       ? 'Alta prioridade'
                                       : task.priority === 'low'
-                                        ? 'Baixa prioridade'
-                                        : 'Média prioridade'}
+                                      ? 'Baixa prioridade'
+                                      : 'Média prioridade'}
                                   </span>
                                   <span className="task-author">
                                     {task.created_by_name || 'usuario'}
@@ -551,7 +660,6 @@ export default function App() {
                                   <p className="task-card-desc">{task.description}</p>
                                 )}
 
-                                {/* DATA DE VENCIMENTO SEMPRE VISÍVEL QUANDO EXISTIR */}
                                 {task.category === 'system_update' && task.due_date && (
                                   <div className="task-card-due-details">
                                     <div className="due-date-box">
@@ -573,8 +681,9 @@ export default function App() {
                                       </div>
                                       {daysInfo && (
                                         <span
-                                          className={`days-badge ${daysInfo.isLate ? 'late' : ''
-                                            }`}
+                                          className={`days-badge ${
+                                            daysInfo.isLate ? 'late' : ''
+                                          }`}
                                         >
                                           {daysInfo.text}
                                         </span>
@@ -585,18 +694,19 @@ export default function App() {
 
                                 <div className="task-card-footer">
                                   <span
-                                    className={`priority-pill ${task.priority === 'high'
-                                      ? 'high'
-                                      : task.priority === 'low'
+                                    className={`priority-pill ${
+                                      task.priority === 'high'
+                                        ? 'high'
+                                        : task.priority === 'low'
                                         ? 'low'
                                         : 'medium'
-                                      }`}
+                                    }`}
                                   >
                                     {task.priority === 'high'
                                       ? 'Alta prioridade'
                                       : task.priority === 'low'
-                                        ? 'Baixa prioridade'
-                                        : 'Média prioridade'}
+                                      ? 'Baixa prioridade'
+                                      : 'Média prioridade'}
                                   </span>
                                   <span className="task-author">
                                     {task.created_by_name || 'usuario'}
@@ -613,7 +723,7 @@ export default function App() {
               </>
             )}
 
-            {/* SEÇÃO 2: TAREFAS CONCLUÍDAS */}
+            {/* TAREFAS CONCLUÍDAS */}
             {taskTab === 'completed' && (
               <div className="kanban-column max-w-2xl mx-auto mt-4">
                 <div className="column-banner completed">
