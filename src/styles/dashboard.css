@@ -81,13 +81,13 @@
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 9999px;
-  background-color: #2563eb;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 2px solid #2563eb;
+  border: 2px solid rgb(33, 84, 156);
   transition: all 0.2s ease;
 }
 
@@ -105,9 +105,9 @@
 /* 2. Banner Principal (Azul Corporativo) */
 .sme-welcome-banner {
   width: 100%;
-  background-color: #2563eb;
+  background-color: rgb(37, 95, 176);
   color: #ffffff;
-  padding: 1.5rem 2rem;
+  padding: 2rem 2rem;
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -126,7 +126,7 @@
 /* 3. Sub-header / Faixa Secundária (Azul Claro) */
 .sme-sub-header {
   width: 100%;
-  background-color: #93c5fd;
+  background-color: rgb(146, 185, 240);
   padding: 0.625rem 2rem;
   display: flex;
   align-items: center;
@@ -230,7 +230,7 @@
 .home-module-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 20px -5px rgba(37, 99, 235, 0.15);
-  border-color: #2563eb;
+  border-color: rgb(37, 95, 176);
 }
 
 /* Container da Imagem (Menor e Centralizada) */
