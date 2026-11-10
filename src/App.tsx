@@ -392,7 +392,7 @@ export default function App() {
                   className={`btn-view-toggle ${viewMode === 'notes' ? 'active-notes' : ''}`}
                 >
                   <StickyNote size={15} />
-                  <span>{viewMode === 'notes' ? 'Ver como Quadro' : 'Ver como Notas'}</span>
+                  <span>{viewMode === 'notes' ? 'Tarefas' : 'Notas'}</span>
                 </button>
 
                 <div className="task-tabs-container">
