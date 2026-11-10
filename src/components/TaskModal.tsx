@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { Task, TaskCategory, TaskPriority } from '../types/task';
-import { X, Save, Loader2, StickyNote } from 'lucide-react';
+import { X, Loader2, Check } from 'lucide-react';
+import type { Task } from '../types/task';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -16,43 +16,23 @@ export default function TaskModal({
   onTaskCreated,
   taskToEdit,
 }: TaskModalProps) {
-  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<'tarefa' | 'demanda'>('tarefa');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TaskCategory>('user_support');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
-  const [cardColor, setCardColor] = useState<string>('yellow');
   const [dueDate, setDueDate] = useState('');
-  const [createNote, setCreateNote] = useState(false);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (taskToEdit) {
-      setTitle(taskToEdit.title || '');
-      setDescription(taskToEdit.description || '');
-      setCategory(taskToEdit.category || 'user_support');
+      setCategory(taskToEdit.category || 'tarefa');
+      setDescription(taskToEdit.description || taskToEdit.title || '');
+      setDueDate(taskToEdit.due_date ? taskToEdit.due_date.split('T')[0] : '');
       setPriority(taskToEdit.priority || 'medium');
-      setCardColor(taskToEdit.card_color || 'yellow');
-      setCreateNote(false);
-
-      if (taskToEdit.due_date) {
-        const d = new Date(taskToEdit.due_date);
-        const pad = (num: number) => String(num).padStart(2, '0');
-        const formattedDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-          d.getDate()
-        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        setDueDate(formattedDate);
-      } else {
-        setDueDate('');
-      }
     } else {
-      setTitle('');
+      setCategory('tarefa');
       setDescription('');
-      setCategory('user_support');
-      setPriority('medium');
-      setCardColor('yellow');
       setDueDate('');
-      setCreateNote(false);
+      setPriority('medium');
     }
   }, [taskToEdit, isOpen]);
 
@@ -60,196 +40,152 @@ export default function TaskModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!description.trim()) return;
 
     setLoading(true);
-    setErrorMsg(null);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('Usuário não autenticado.');
-      }
-
-      const authorName = user.email ? user.email.split('@')[0] : 'usuario';
-      const finalDueDate =
-        category === 'system_update' && dueDate ? new Date(dueDate).toISOString() : null;
+      const formattedDueDate = dueDate ? new Date(dueDate).toISOString() : null;
+      const titleText = description.length > 50 ? description.substring(0, 47) + '...' : description;
 
       if (taskToEdit) {
-        // Atualiza a tarefa existente
         const { error } = await supabase
           .from('tasks')
           .update({
-            title: title.trim(),
-            description: description.trim() || null,
+            title: titleText,
+            description: description.trim(),
             category,
+            due_date: formattedDueDate,
             priority,
-            card_color: cardColor,
-            due_date: finalDueDate,
           })
           .eq('id', taskToEdit.id);
 
         if (error) throw error;
       } else {
-        // 1. Inserção da nova tarefa
-        const { error: taskError } = await supabase.from('tasks').insert([
-          {
-            title: title.trim(),
-            description: description.trim() || null,
-            category,
-            status: 'todo',
-            priority,
-            card_color: cardColor,
-            created_by: user.id,
-            created_by_name: authorName,
-            due_date: finalDueDate,
-          },
-        ]);
+        const { data: userData } = await supabase.auth.getUser();
+        const username = userData.user?.email?.split('@')[0] || 'usuario';
 
-        if (taskError) throw taskError;
+        const { error } = await supabase.from('tasks').insert({
+          title: titleText,
+          description: description.trim(),
+          category,
+          due_date: formattedDueDate,
+          priority,
+          status: 'todo',
+          created_by_name: username,
+        });
 
-        // 2. Junção de Título e Descrição para o campo content de quick_notes
-        if (createNote) {
-          const combinedContent = description.trim()
-            ? `${title.trim()}\n\n${description.trim()}`
-            : title.trim();
-
-          const { error: noteError } = await supabase.from('quick_notes').insert([
-            {
-              content: combinedContent,
-              color: 'yellow',
-              created_by: user.id,
-              created_by_name: authorName,
-            },
-          ]);
-
-          if (noteError) {
-            console.error('Erro ao inserir nota na tabela quick_notes:', noteError);
-          }
-        }
+        if (error) throw error;
       }
 
       onTaskCreated();
       onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao salvar a tarefa no banco de dados.');
+    } catch (err) {
+      console.error('Erro ao salvar item:', err);
+      alert('Não foi possível salvar.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal-card">
         <div className="modal-header">
-          <h3>{taskToEdit ? 'Editar Tarefa' : 'Criar Nova Tarefa'}</h3>
+          <h3>{taskToEdit ? 'Editar Item' : 'Criar Novo Item'}</h3>
           <button type="button" onClick={onClose} className="btn-close-modal">
-            <X className="w-5 h-5" />
+            <X size={20} />
           </button>
         </div>
 
-        {errorMsg && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium">
-            {errorMsg}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="modal-field">
-            <label className="modal-label">Título da Tarefa *</label>
-            <input
-              type="text"
+            <label className="modal-label">Tipo de Item</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCategory('tarefa')}
+                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all border ${
+                  category === 'tarefa'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                }`}
+              >
+                Tarefa
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory('demanda')}
+                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all border ${
+                  category === 'demanda'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                }`}
+              >
+                Demanda 
+              </button>
+            </div>
+          </div>
+
+          <div className="modal-field">
+            <label className="modal-label">Descrição *</label>
+            <textarea
               required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Verificar erro no cadastro de alunos"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="modal-textarea"
+            />
+          </div>
+
+          <div className="modal-field">
+            <label className="modal-label">Data de Vencimento</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
               className="modal-input"
             />
           </div>
 
           <div className="modal-field">
-            <label className="modal-label">Descrição</label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva detalhes sobre a solicitação ou chamado..."
-              className="modal-textarea"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="modal-field">
-              <label className="modal-label">Quadro / Categoria</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TaskCategory)}
-                className="modal-select"
+            <label className="modal-label">Prioridade</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setPriority('low')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                  priority === 'low'
+                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
               >
-                <option value="user_support">Atendimento ao usuário</option>
-                <option value="system_update">Demanda Siguescola</option>
-              </select>
-            </div>
-
-            <div className="modal-field">
-              <label className="modal-label">Prioridade</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="modal-select"
+                Baixa
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriority('medium')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                  priority === 'medium'
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
               >
-                <option value="low">Baixa prioridade</option>
-                <option value="medium">Média prioridade</option>
-                <option value="high">Alta prioridade</option>
-              </select>
+                Média
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriority('high')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all border ${
+                  priority === 'high'
+                    ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                Alta
+              </button>
             </div>
           </div>
-
-          {category === 'system_update' && (
-            <div className="modal-field">
-              <label className="modal-label">Prazo / Agendamento (Calendário)</label>
-              <input
-                type="datetime-local"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="modal-input"
-              />
-            </div>
-          )}
-
-          <div className="modal-field">
-            <label className="modal-label">Cor do Card</label>
-            <div className="color-picker-grid">
-              {(['yellow', 'green', 'red', 'blue', 'purple'] as const).map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setCardColor(color)}
-                  className={`color-option ${color} ${cardColor === color ? 'selected' : ''}`}
-                  title={`Cor ${color}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {!taskToEdit && (
-            <div className="note-checkbox-container">
-              <input
-                type="checkbox"
-                id="createNoteCheckbox"
-                checked={createNote}
-                onChange={(e) => setCreateNote(e.target.checked)}
-                className="note-checkbox-input"
-              />
-              <label htmlFor="createNoteCheckbox" className="note-checkbox-label">
-                <StickyNote className="note-checkbox-icon" />
-                <span>Criar nota rápida no quadro automaticamente</span>
-              </label>
-            </div>
-          )}
 
           <div className="modal-footer">
             <button type="button" onClick={onClose} className="btn-modal-cancel">
@@ -257,18 +193,11 @@ export default function TaskModal({
             </button>
             <button type="submit" disabled={loading} className="btn-modal-submit">
               {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Salvando...</span>
-                </>
-              ) : taskToEdit ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Salvar Alterações</span>
-                </>
+                <Loader2 className="animate-spin h-4 w-4" />
               ) : (
                 <>
-                  <span>Criar Tarefa</span>
+                  <Check size={16} />
+                  <span>Salvar</span>
                 </>
               )}
             </button>

@@ -159,14 +159,7 @@
   transform: translateY(-1px);
 }
 
-.sme-nav-pill.active {
-  background-color: #0f172a;
-  color: #ffffff;
-}
 
-.sme-nav-pill.active svg {
-  color: #ffffff;
-}
 
 /* ==========================================
    ÁREA DE CONTEÚDO PRINCIPAL
@@ -195,10 +188,10 @@
 }
 
 /* ==========================================================================
-   CARDS DA TELA INICIAL (IMAGENS MENORES E CENTRALIZADAS)
+   CARDS DA TELA INICIAL
    ========================================================================== */
 .home-modules-container {
-  max-width: 60rem; /* ~960px */
+  max-width: 60rem;
   margin: 0 auto;
   padding: 1.5rem 1rem;
 }
@@ -211,11 +204,10 @@
 
 @media (min-width: 768px) {
   .home-modules-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* Card Container */
 .home-module-card {
   background-color: #ffffff;
   border-radius: 1rem;
@@ -234,23 +226,22 @@
   border-color: rgb(37, 95, 176);
 }
 
-/* Container da Imagem (Menor e Centralizada) */
 .module-image-wrapper {
   width: 100%;
-  height: 8.5rem; /* Altura reduzida para deixar a imagem menor */
+  height: 8.5rem;
   overflow: hidden;
   background-color: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem; /* Margem interna para afastar das bordas */
+  padding: 1rem;
   box-sizing: border-box;
 }
 
 .module-image {
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain; /* Garante que a imagem fique inteira, menor e sem cortar */
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
@@ -258,7 +249,6 @@
   transform: scale(1.08);
 }
 
-/* Rodapé do Card com o Título */
 .module-card-footer {
   padding: 0.875rem 1rem;
   text-align: center;
@@ -366,7 +356,7 @@
 }
 
 /* ==========================================
-   SUB-ABAS KANBAN (EM ANDAMENTO x CONCLUÍDAS)
+   SUB-ABAS KANBAN
    ========================================== */
 .task-tabs-container {
   display: flex;
@@ -399,6 +389,37 @@
   color: #10b981;
 }
 
+/* ==========================================================================
+   BOTÃO DE ALTERNAR VISUALIZAÇÃO
+   ========================================================================== */
+.btn-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid #d97706;
+  background-color: #ffffff;
+  color: #b45309;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-view-toggle:hover {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-color: #b45309;
+}
+
+.btn-view-toggle.active-notes {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
 /* ==========================================
    GRID DAS COLUNAS KANBAN
    ========================================== */
@@ -417,7 +438,6 @@
   box-shadow: 0 1px 3px rgba(26, 75, 140, 0.06);
 }
 
-/* Banner de Cabeçalho da Coluna */
 .column-banner {
   border-radius: 0.75rem;
   padding: 0.875rem 1.125rem;
@@ -509,7 +529,7 @@
 }
 
 /* ==========================================
-   LISTA DE CARDS DE TAREFAS
+   LISTA DE CARDS DE TAREFAS (KANBAN)
    ========================================== */
 .task-list {
   display: flex;
@@ -526,11 +546,10 @@
   font-size: 0.8125rem;
 }
 
-/* Cards Individuais de Tarefa */
 .task-card {
   border-radius: 0.875rem;
   padding: 1.125rem;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -544,14 +563,12 @@
   box-shadow: 0 4px 12px rgba(26, 75, 140, 0.08);
 }
 
-/* Variações de Cores dos Cards */
-.task-card.yellow { background-color: #fefce8; border-color: #fef08a; }
+/* Cores dos Cards no Kanban */
+.task-card.red { background-color: #fef2f2; border-color: #fca5a5; }
+.task-card.orange { background-color: #fff7ed; border-color: #ff8800; }
+.task-card.blue { background-color: #eff6ff; border-color: #93c5fd; }
 .task-card.green { background-color: #f0fdf4; border-color: #bbf7d0; }
-.task-card.red { background-color: #fef2f2; border-color: #fecaca; }
-.task-card.blue { background-color: #f0f9ff; border-color: #bae6fd; }
-.task-card.purple { background-color: #faf5ff; border-color: #e9d5ff; }
 
-/* Tag Superior no Card */
 .task-tag {
   display: inline-flex;
   align-items: center;
@@ -560,13 +577,9 @@
   padding: 0.25rem 0.625rem;
   border-radius: 0.5rem;
   width: fit-content;
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #334155;
 }
-
-.task-card.yellow .task-tag { background-color: #fef08a; color: #854d0e; }
-.task-card.green .task-tag { background-color: #bbf7d0; color: #166534; }
-.task-card.red .task-tag { background-color: #fecaca; color: #991b1b; }
-.task-card.blue .task-tag { background-color: #bae6fd; color: #075985; }
-.task-card.purple .task-tag { background-color: #e9d5ff; color: #6b21a8; }
 
 .task-card-header {
   display: flex;
@@ -595,14 +608,6 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-.task-card-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #1a2332;
-  margin: 0;
-  line-height: 1.3;
-}
-
 .task-card-desc {
   font-size: 0.8125rem;
   color: #475569;
@@ -610,7 +615,6 @@
   line-height: 1.4;
 }
 
-/* Detalhes de Prazo */
 .due-date-box {
   display: flex;
   align-items: center;
@@ -627,23 +631,6 @@
   gap: 0.375rem;
 }
 
-.days-badge {
-  background-color: #dbeafe;
-  color: #1e40af;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 0.375rem;
-  border: 1px solid #bfdbfe;
-}
-
-.days-badge.late {
-  background-color: #ffe4e6;
-  color: #be123c;
-  border-color: #fecdd3;
-}
-
-/* Rodapé do Card */
 .task-card-footer {
   display: flex;
   align-items: center;
@@ -651,16 +638,44 @@
   margin-top: 0.25rem;
 }
 
+/* ==========================================================================
+   PÍLULAS DE PRIORIDADE (SPANS COLORIDOS CONFORME A PRIORIDADE)
+   ========================================================================== */
+
 .priority-pill {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.65rem;
   border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
 }
 
-.priority-pill.high { background-color: #ffe4e6; color: #e11d48; }
-.priority-pill.medium { background-color: #e0f2fe; color: #0284c7; }
-.priority-pill.low { background-color: #dcfce7; color: #16a34a; }
+/* Alta - Vermelho Sólido */
+.priority-pill.high {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1px solid #dc2626 !important;
+}
+
+/* Média - Laranja Vívido Sólido com Borda Marcante */
+.priority-pill.medium {
+  background-color: #ff6600 !important;
+  color: #ffffff !important;
+  border: 1px solid #ea580c !important;
+}
+
+/* Baixa - Azul Sólido */
+.priority-pill.low {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+}
 
 .task-author {
   font-size: 0.75rem;
@@ -668,8 +683,178 @@
   font-weight: 500;
 }
 
+/* ==========================================================================
+   QUADRO DE NOTAS DE CORTIÇA (CORKBOARD + POST-ITS AMARELOS PADRONIZADOS)
+   ========================================================================== */
+
+.postit-board-wrapper {
+  position: relative;
+  background-color: #c9a23e;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 0);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+  
+  /* Moldura de Madeira */
+  border: 12px solid #4a2c15;
+  border-radius: 1rem;
+  box-shadow: 
+    inset 0 0 12px rgba(0, 0, 0, 0.4),
+    0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 1.75rem 1.5rem 1.5rem 1.5rem;
+  min-height: 420px;
+  box-sizing: border-box;
+}
+
+.postit-board-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5cm; /* Distância exata de 0,5cm entre os post-its */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* POST-IT PADRÃO (DIMENSÕES FIXAS POR PADRÃO + ROLAGEM DE TEXTO) */
+.postit-card {
+  background: #fff740 !important;
+  background: linear-gradient(135deg, #fff740 0%, #ffe066 100%) !important;
+  color: #1a1a1a;
+  padding: 1.5rem 1.25rem 1rem 1.25rem;
+  border-radius: 0.375rem;
+  
+  /* TAMANHO PADRÃO DO POST-IT */
+  width: 220px;
+  height: 200px;
+  
+  /* Limites de redimensionamento */
+  min-width: 180px;
+  min-height: 160px;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.25), 0 3px 5px -2px rgba(0, 0, 0, 0.1);
+  border: none !important;
+  box-sizing: border-box;
+  
+  /* Permite redimensionar manualmente caso desejado */
+  resize: both;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ALFINETE VERMELHO 3D SUPERIOR CENTRALIZADO */
+.postit-card::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  background-color: #e11d48;
+  background: radial-gradient(circle at 6px 6px, #ff5a7a, #b91340);
+  border-radius: 50%;
+  box-shadow: 
+    0 3px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
+
+/* Rotações sutis para efeito artesanal */
+.postit-rotate-1 { transform: rotate(-1.5deg); }
+.postit-rotate-2 { transform: rotate(1deg); }
+.postit-rotate-3 { transform: rotate(-2deg); }
+
+.postit-card:hover {
+  transform: scale(1.02) rotate(0deg) !important;
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.postit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.postit-category-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.08);
+  color: #334155;
+}
+
+/* CORPO DO TEXTO DO POST-IT COM ROLAGEM AUTOMÁTICA */
+.postit-body {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+/* Personalização da barra de rolagem interna do post-it */
+.postit-body::-webkit-scrollbar {
+  width: 4px;
+}
+.postit-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.postit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.postit-author {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.postit-action-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: background-color 0.15s ease;
+}
+
+.postit-action-btn:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.postit-action-btn.check:hover {
+  color: #16a34a;
+}
+
 /* ==========================================
-   MODAL DE CRIAÇÃO E EDIÇÃO DE TAREFAS
+   MODAIS DA APLICAÇÃO
    ========================================== */
 .modal-overlay {
   position: fixed;
@@ -779,37 +964,6 @@
   resize: none;
 }
 
-/* Seletor de Cores no Modal */
-.color-picker-grid {
-  display: flex;
-  gap: 0.625rem;
-  align-items: center;
-  margin-top: 0.25rem;
-}
-
-.color-option {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.color-option:hover { transform: scale(1.1); }
-.color-option.selected {
-  transform: scale(1.15);
-  border-color: #1a4b8c;
-  box-shadow: 0 2px 8px rgba(26, 75, 140, 0.15);
-}
-
-.color-option.yellow { background-color: #fef08a; }
-.color-option.green { background-color: #bbf7d0; }
-.color-option.red { background-color: #fecaca; }
-.color-option.blue { background-color: #bae6fd; }
-.color-option.purple { background-color: #e9d5ff; }
-
-/* Rodapé do Modal */
 .modal-footer {
   display: flex;
   align-items: center;
@@ -858,37 +1012,6 @@
 .btn-modal-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Checkbox "Criar Nota Automática" */
-.note-checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid #f0f4f8;
-}
-
-.note-checkbox-input {
-  height: 1rem;
-  width: 1rem;
-  border-radius: 0.25rem;
-  border: 1px solid #c5cdd8;
-  color: #1a4b8c;
-  cursor: pointer;
-  accent-color: #1a4b8c;
-}
-
-.note-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #334155;
-  cursor: pointer;
-  user-select: none;
 }
 
 /* ==========================================

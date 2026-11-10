@@ -9,7 +9,6 @@ import type { Task } from './types/task';
 import MeetingTopicsView from './components/meetingTopicView';
 import MeetingTopicModal from './components/meetingTopicModel';
 import type { MeetingTopic } from './types/meetingTopic';
-import NotesView from './components/NotesView';
 import ProfileView from './components/ProfileView';
 
 import {
@@ -23,7 +22,6 @@ import {
   Clock,
   GraduationCap,
   Trash2,
-  RotateCcw,
   Check,
   Calendar,
   Pencil,
@@ -31,9 +29,10 @@ import {
   StickyNote,
   LayoutGrid,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
-type NavType = 'home' | 'kanban' | 'meeting_topics' | 'notes' | 'profile';
+type NavType = 'home' | 'kanban' | 'meeting_topics' | 'profile';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -43,28 +42,33 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
+  // Modo de visualização: Kanban vs Notas
+  const [viewMode, setViewMode] = useState<'kanban' | 'notes'>('kanban');
+
+  // Modal de Conclusão com Data
+  const [taskToComplete, setTaskToComplete] = useState<Task | null>(null);
+  const [completionDate, setCompletionDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [loadingComplete, setLoadingComplete] = useState(false);
+
   // Navegação Principal com persistência no localStorage
   const [activeNav, setActiveNav] = useState<NavType>(() => {
     const savedNav = localStorage.getItem('sme_active_nav') as NavType;
-    return savedNav || 'home';
+    return savedNav === ('notes' as any) ? 'kanban' : savedNav || 'home';
   });
 
-  // Função auxiliar para mudar a tela e guardar a preferência
   const handleNavigate = (nav: NavType) => {
     setActiveNav(nav);
     localStorage.setItem('sme_active_nav', nav);
   };
 
-  // Função de encerramento de sessão limpando a rota salva
   const handleLogout = async () => {
     localStorage.removeItem('sme_active_nav');
     await supabase.auth.signOut();
   };
 
-  // Sub-navegação interna no Quadro de Tarefas: 'active' | 'completed'
   const [taskTab, setTaskTab] = useState<'active' | 'completed'>('active');
-
-  // Estado das pautas
   const [isMeetingTopicModalOpen, setIsMeetingTopicModalOpen] = useState(false);
   const [topicToEdit, setTopicToEdit] = useState<MeetingTopic | null>(null);
   const [fetchMeetingTopicsFn, setFetchMeetingTopicsFn] = useState<(() => void) | null>(null);
@@ -129,7 +133,7 @@ export default function App() {
   }, [session, fetchTasks]);
 
   const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+    if (!confirm('Tem certeza que deseja excluir este item?')) return;
 
     try {
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
@@ -137,42 +141,33 @@ export default function App() {
       setTasks((prev) => prev.filter((task) => task.id !== taskId));
     } catch (err) {
       console.error('Erro ao deletar tarefa:', err);
-      alert('Não foi possível excluir a tarefa.');
+      alert('Não foi possível excluir o item.');
     }
   };
 
-  const handleToggleComplete = async (task: Task) => {
-    const isCompleted = task.status === 'completed';
-    const message = isCompleted
-      ? 'Deseja reabrir esta tarefa?'
-      : 'Tem certeza que deseja concluir esta tarefa?';
+  const handleConfirmCompletion = async () => {
+    if (!taskToComplete) return;
 
-    if (!confirm(message)) return;
-
-    const newStatus = isCompleted ? 'todo' : 'completed';
-    const completedAt = isCompleted ? null : new Date().toISOString();
-
+    setLoadingComplete(true);
     try {
+      const isoDate = new Date(completionDate).toISOString();
       const { error } = await supabase
         .from('tasks')
         .update({
-          status: newStatus,
-          completed_at: completedAt,
+          status: 'completed',
+          completed_at: isoDate,
         })
-        .eq('id', task.id);
+        .eq('id', taskToComplete.id);
 
       if (error) throw error;
 
-      setTasks((prev) =>
-        prev.map((item) =>
-          item.id === task.id
-            ? { ...item, status: newStatus, completed_at: completedAt }
-            : item,
-        ),
-      );
+      await fetchTasks();
+      setTaskToComplete(null);
     } catch (err) {
-      console.error('Erro ao alterar status da tarefa:', err);
-      alert('Não foi possível alterar o status da tarefa.');
+      console.error('Erro ao concluir tarefa:', err);
+      alert('Não foi possível concluir o item.');
+    } finally {
+      setLoadingComplete(false);
     }
   };
 
@@ -186,28 +181,26 @@ export default function App() {
     setIsModalOpen(true);
   };
 
-  const getDaysRemainingText = (dueDateString?: string | null) => {
-    if (!dueDateString) return null;
+  // Mapeamento de cores dos cards por prioridade
+  const getCardColorClass = (priority?: string) => {
+    if (priority === 'high') return 'red';
+    if (priority === 'medium') return 'orange';
+    return 'blue';
+  };
 
-    const dueDate = new Date(dueDateString);
-    const today = new Date();
+  // Ordenação por Prioridade (Alta -> Média -> Baixa)
+  const priorityOrder: Record<string, number> = {
+    high: 1,
+    medium: 2,
+    low: 3,
+  };
 
-    dueDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return { text: `Atrasado há ${Math.abs(diffDays)} dia(s)`, isLate: true };
-    }
-    if (diffDays === 0) {
-      return { text: 'Vence hoje!', isLate: false };
-    }
-    if (diffDays === 1) {
-      return { text: 'Vence amanhã', isLate: false };
-    }
-    return { text: `Faltam ${diffDays} dias`, isLate: false };
+  const sortTasksByPriority = (taskList: Task[]) => {
+    return [...taskList].sort((a, b) => {
+      const pA = priorityOrder[a.priority || 'low'] || 3;
+      const pB = priorityOrder[b.priority || 'low'] || 3;
+      return pA - pB;
+    });
   };
 
   if (loading) {
@@ -246,27 +239,22 @@ export default function App() {
   const firstName = currentUserName.charAt(0).toUpperCase() + currentUserName.slice(1);
 
   const totalTasks = tasks.length;
-  const userSupportTasks = tasks.filter(
-    (task) => task.category === 'user_support' && task.status !== 'completed',
+  
+  // Listas filtradas e ordenadas por prioridade
+  const demandTasks = sortTasksByPriority(
+    tasks.filter((task) => task.category === 'demanda' && task.status !== 'completed')
   );
-  const systemUpdateTasks = tasks.filter(
-    (task) => task.category === 'system_update' && task.status !== 'completed',
+  const systemTasks = sortTasksByPriority(
+    tasks.filter((task) => task.category === 'tarefa' && task.status !== 'completed')
   );
-  const completedTasks = tasks.filter((task) => task.status === 'completed');
-
-  const getCardColorClass = (task: Task, index: number) => {
-    if (task.card_color) return task.card_color;
-    if (task.priority === 'high') return 'yellow';
-    if (task.priority === 'low') return 'green';
-    const palette = ['blue', 'purple', 'yellow'];
-    return palette[index % palette.length];
-  };
+  const completedTasks = sortTasksByPriority(
+    tasks.filter((task) => task.status === 'completed')
+  );
 
   return (
     <div className="dashboard-page">
-      {/* CABEÇALHO INSPIRADO NO SISTEMA SME */}
+      {/* CABEÇALHO */}
       <header className="w-full">
-        {/* 1. Navbar Branca Superior */}
         <div className="sme-topbar">
           <div className="sme-topbar-left">
             <button onClick={() => handleNavigate('home')} className="sme-icon-btn" title="Ir para a Tela Inicial">
@@ -279,7 +267,6 @@ export default function App() {
           </div>
 
           <div className="sme-topbar-right">
-            {/* Avatar do Usuário (Círculo Azul) */}
             <div
               onClick={() => handleNavigate('profile')}
               className="sme-user-avatar"
@@ -290,7 +277,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 2. Banner Azul Corporativo de Boas-Vindas */}
         <div className="sme-welcome-banner">
           <h1 className="sme-welcome-title">
             <span>👋</span>
@@ -298,7 +284,6 @@ export default function App() {
           </h1>
         </div>
 
-        {/* 3. Sub-header (Caminho / Breadcrumb Dinâmico) */}
         <div className="sme-sub-header flex items-center gap-2">
           <button
             onClick={() => handleNavigate('home')}
@@ -313,17 +298,7 @@ export default function App() {
               <ChevronRight size={14} className="text-slate-500" />
               <div className="sme-nav-pill active">
                 <LayoutGrid size={14} />
-                <span>QUADRO DE TAREFAS</span>
-              </div>
-            </>
-          )}
-
-          {activeNav === 'notes' && (
-            <>
-              <ChevronRight size={14} className="text-slate-500" />
-              <div className="sme-nav-pill active">
-                <StickyNote size={14} />
-                <span>NOTAS RÁPIDAS</span>
+                <span>TAREFAS E DEMANDAS</span>
               </div>
             </>
           )}
@@ -340,13 +315,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* CONTEÚDO PRINCIPAL DA APLICAÇÃO */}
+      {/* CONTEÚDO PRINCIPAL */}
       <main className="dash-content">
-        {/* TELA INICIAL (CARDS COM IMAGEM E TÍTULO) */}
+        {/* TELA INICIAL */}
         {activeNav === 'home' && (
           <div className="home-modules-container">
-            <div className="home-modules-grid">
-              {/* Card 1: Tarefas */}
+            <div className="home-modules-grid max-w-2xl mx-auto">
               <div
                 onClick={() => handleNavigate('kanban')}
                 className="home-module-card group"
@@ -354,33 +328,15 @@ export default function App() {
                 <div className="module-image-wrapper">
                   <img
                     src="/images/kanban.png"
-                    alt="Tarefas"
+                    alt="Tarefas e Demandas"
                     className="module-image"
                   />
                 </div>
                 <div className="module-card-footer">
-                  <span className="module-title">TAREFAS</span>
+                  <span className="module-title">TAREFAS E DEMANDAS</span>
                 </div>
               </div>
 
-              {/* Card 2: Notas Rápidas */}
-              <div
-                onClick={() => handleNavigate('notes')}
-                className="home-module-card group"
-              >
-                <div className="module-image-wrapper">
-                  <img
-                    src="/images/postit.png"
-                    alt="Notas Rápidas"
-                    className="module-image"
-                  />
-                </div>
-                <div className="module-card-footer">
-                  <span className="module-title">NOTAS RÁPIDAS</span>
-                </div>
-              </div>
-
-              {/* Card 3: Pautas de Reunião */}
               <div
                 onClick={() => handleNavigate('meeting_topics')}
                 className="home-module-card group"
@@ -423,338 +379,334 @@ export default function App() {
           />
         )}
 
-        {/* TELA DE NOTAS */}
-        {activeNav === 'notes' && <NotesView />}
-
-        {/* TELA DE TAREFAS (KANBAN) */}
+        {/* TELA DE TAREFAS E DEMANDAS */}
         {activeNav === 'kanban' && (
           <>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="dash-page-title mb-0">Quadro de Tarefas</h2>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <h2 className="dash-page-title mb-0">Quadro de Tarefas & Demandas</h2>
 
-              <div className="task-tabs-container">
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setTaskTab('active')}
-                  className={`task-tab-btn ${taskTab === 'active' ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setViewMode(viewMode === 'kanban' ? 'notes' : 'kanban')}
+                  className={`btn-view-toggle ${viewMode === 'notes' ? 'active-notes' : ''}`}
                 >
-                  Em Andamento ({userSupportTasks.length + systemUpdateTasks.length})
+                  <StickyNote size={15} />
+                  <span>{viewMode === 'notes' ? 'Ver como Quadro' : 'Ver como Notas'}</span>
                 </button>
 
-                <button
-                  onClick={() => setTaskTab('completed')}
-                  className={`task-tab-btn ${taskTab === 'completed' ? 'active' : ''}`}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 icon-emerald" />
-                  <span>Concluídas ({completedTasks.length})</span>
-                </button>
+                <div className="task-tabs-container">
+                  <button
+                    onClick={() => setTaskTab('active')}
+                    className={`task-tab-btn ${taskTab === 'active' ? 'active' : ''}`}
+                  >
+                    Em Andamento ({demandTasks.length + systemTasks.length})
+                  </button>
+
+                  <button
+                    onClick={() => setTaskTab('completed')}
+                    className={`task-tab-btn ${taskTab === 'completed' ? 'active' : ''}`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 icon-emerald" />
+                    <span>Concluídas ({completedTasks.length})</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* TAREFAS EM ANDAMENTO */}
-            {taskTab === 'active' && (
-              <>
-                <div className="metrics-grid">
-                  <div className="metric-card">
-                    <div>
-                      <div className="metric-card-label">TAREFAS CRIADAS</div>
-                      <div className="metric-card-value">
-                        <span className="number">{totalTasks}</span>
-                        <span className="text">no total</span>
+            {/* MODO NOTAS (QUADRO DE CORTIÇA + POST-ITS ORDENADOS) */}
+            {viewMode === 'notes' ? (
+              <div className="postit-board-wrapper">
+                <div className="postit-board-grid">
+                  {sortTasksByPriority(
+                    tasks.filter((t) =>
+                      taskTab === 'active' ? t.status !== 'completed' : t.status === 'completed'
+                    )
+                  ).map((item, idx) => (
+                    <div
+                      key={item.id}
+                      className={`postit-card postit-rotate-${(idx % 3) + 1}`}
+                    >
+                      <div className="postit-header">
+                        <span className="postit-category-tag">
+                          {item.category === 'demanda' ? 'Demanda' : 'Tarefa'}
+                        </span>
+                        <span className={`priority-pill ${item.priority || 'medium'}`}>
+                          {item.priority === 'high' ? 'Alta' : item.priority === 'medium' ? 'Média' : 'Baixa'}
+                        </span>
                       </div>
-                    </div>
-                    <div className="metric-icon-box">
-                      <SlidersHorizontal className="h-5 w-5" />
-                    </div>
-                  </div>
 
-                  <div className="metric-card">
-                    <div>
-                      <div className="metric-card-label">
-                        <span className="dot dot-blue" /> ATENDIMENTO AO USUÁRIO
-                      </div>
-                      <div className="metric-card-value">
-                        <span className="number">{userSupportTasks.length}</span>
-                        <span className="text">chamados ativos</span>
-                      </div>
-                    </div>
-                    <div className="metric-icon-box blue">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                  </div>
+                      <p className="postit-body">
+                        {item.description || item.title}
+                      </p>
 
-                  <div className="metric-card">
-                    <div>
-                      <div className="metric-card-label">
-                        <span className="dot dot-purple" /> DEMANDA SIGUESCOLA
-                      </div>
-                      <div className="metric-card-value">
-                        <span className="number">{systemUpdateTasks.length}</span>
-                        <span className="text">demandas cadastradas</span>
+                      <div className="postit-footer">
+                        <span className="postit-author">{item.created_by_name || 'usuario'}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditModal(item)}
+                            className="postit-action-btn"
+                            title="Editar"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          {item.status !== 'completed' && (
+                            <button
+                              onClick={() => setTaskToComplete(item)}
+                              className="postit-action-btn check"
+                              title="Concluir"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="metric-icon-box purple">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                  </div>
+                  ))}
                 </div>
-
-                {loadingTasks ? (
-                  <div className="flex h-48 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  </div>
-                ) : (
-                  <div className="kanban-grid">
-                    {/* QUADRO 1: ATENDIMENTO AO USUÁRIO */}
-                    <div className="kanban-column">
-                      <div className="column-banner suporte">
-                        <div className="column-banner-title">
-                          <Clock className="h-5 w-5" />
-                          <div>
-                            <h3>Atendimento ao Usuário</h3>
-                          </div>
-                        </div>
-                        <div className="column-banner-actions">
-                          <span className="badge-count">{userSupportTasks.length} tarefas</span>
-                          <button onClick={handleOpenCreateModal} className="btn-add-column">
-                            <Plus className="h-3.5 w-3.5" />
-                            <span>Adicionar</span>
-                          </button>
+              </div>
+            ) : (
+              /* MODO KANBAN PADRÃO */
+              taskTab === 'active' && (
+                <>
+                  <div className="metrics-grid">
+                    <div className="metric-card">
+                      <div>
+                        <div className="metric-card-label">TOTAL DE ITENS</div>
+                        <div className="metric-card-value">
+                          <span className="number">{totalTasks}</span>
+                          <span className="text">cadastrados</span>
                         </div>
                       </div>
-
-                      <div className="task-list">
-                        {userSupportTasks.length === 0 ? (
-                          <div className="empty-task-state">
-                            Nenhum chamado ativo no momento.
-                          </div>
-                        ) : (
-                          userSupportTasks.map((task, idx) => {
-                            const colorClass = getCardColorClass(task, idx);
-
-                            return (
-                              <div key={task.id} className={`task-card ${colorClass}`}>
-                                <div className="task-card-header">
-                                  <span className="task-tag">
-                                    Chamado #{task.id.substring(0, 4)}
-                                  </span>
-                                  <div className="task-card-header-actions">
-                                    <button
-                                      onClick={() => handleOpenEditModal(task)}
-                                      className="task-action-icon"
-                                      title="Editar tarefa"
-                                    >
-                                      <Pencil className="h-4 w-4 text-slate-600 hover:text-slate-900" />
-                                    </button>
-                                    <button
-                                      onClick={() => void handleToggleComplete(task)}
-                                      className="task-action-icon"
-                                      title="Concluir tarefa"
-                                    >
-                                      <Check className="h-4 w-4 text-emerald-600 hover:text-emerald-800" />
-                                    </button>
-                                    <button
-                                      onClick={() => void handleDeleteTask(task.id)}
-                                      className="task-action-icon"
-                                      title="Excluir"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-red-500" />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <h4 className="task-card-title">{task.title}</h4>
-                                {task.description && (
-                                  <p className="task-card-desc">{task.description}</p>
-                                )}
-
-                                <div className="task-card-footer">
-                                  <span
-                                    className={`priority-pill ${
-                                      task.priority === 'high'
-                                        ? 'high'
-                                        : task.priority === 'low'
-                                        ? 'low'
-                                        : 'medium'
-                                    }`}
-                                  >
-                                    {task.priority === 'high'
-                                      ? 'Alta prioridade'
-                                      : task.priority === 'low'
-                                      ? 'Baixa prioridade'
-                                      : 'Média prioridade'}
-                                  </span>
-                                  <span className="task-author">
-                                    {task.created_by_name || 'usuario'}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
+                      <div className="metric-icon-box">
+                        <SlidersHorizontal className="h-5 w-5" />
                       </div>
                     </div>
 
-                    {/* QUADRO 2: DEMANDA SIGUESCOLA */}
-                    <div className="kanban-column">
-                      <div className="column-banner siguescola">
-                        <div className="column-banner-title">
-                          <GraduationCap className="h-5 w-5" />
-                          <div>
-                            <h3>Demanda Siguescola</h3>
-                          </div>
+                    <div className="metric-card">
+                      <div>
+                        <div className="metric-card-label">
+                          <span className="dot dot-purple" /> DEMANDAS
                         </div>
-                        <div className="column-banner-actions">
-                          <span className="badge-count">{systemUpdateTasks.length} tarefas</span>
-                          <button onClick={handleOpenCreateModal} className="btn-add-column">
-                            <Plus className="h-3.5 w-3.5" />
-                            <span>Adicionar</span>
-                          </button>
+                        <div className="metric-card-value">
+                          <span className="number">{demandTasks.length}</span>
+                          <span className="text">mensagens/e-mails</span>
                         </div>
                       </div>
+                      <div className="metric-icon-box purple">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                    </div>
 
-                      <div className="task-list">
-                        {systemUpdateTasks.length === 0 ? (
-                          <div className="empty-task-state">
-                            Nenhuma demanda cadastrada no momento.
+                    <div className="metric-card">
+                      <div>
+                        <div className="metric-card-label">
+                          <span className="dot dot-blue" /> TAREFAS
+                        </div>
+                        <div className="metric-card-value">
+                          <span className="number">{systemTasks.length}</span>
+                          <span className="text">alterações de sistema</span>
+                        </div>
+                      </div>
+                      <div className="metric-icon-box blue">
+                        <GraduationCap className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingTasks ? (
+                    <div className="flex h-48 items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    </div>
+                  ) : (
+                    <div className="kanban-grid">
+                      {/* COLUNA 1: DEMANDAS */}
+                      <div className="kanban-column">
+                        <div className="column-banner suporte">
+                          <div className="column-banner-title">
+                            <Clock className="h-5 w-5" />
+                            <div>
+                              <h3>Demandas</h3>
+                            </div>
                           </div>
-                        ) : (
-                          systemUpdateTasks.map((task, idx) => {
-                            const colorClass = getCardColorClass(task, idx + 1);
-                            const daysInfo = getDaysRemainingText(task.due_date);
+                          <div className="column-banner-actions">
+                            <span className="badge-count">{demandTasks.length}</span>
+                            <button onClick={handleOpenCreateModal} className="btn-add-column">
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Adicionar</span>
+                            </button>
+                          </div>
+                        </div>
 
-                            return (
-                              <div key={task.id} className={`task-card ${colorClass}`}>
-                                <div className="task-card-header">
-                                  <span className="task-tag">
-                                    {task.category === 'system_update'
-                                      ? 'Siguescola'
-                                      : 'Interface'}
-                                  </span>
-                                  <div className="task-card-header-actions">
-                                    <button
-                                      onClick={() => handleOpenEditModal(task)}
-                                      className="task-action-icon"
-                                      title="Editar tarefa"
-                                    >
-                                      <Pencil className="h-4 w-4 text-slate-600 hover:text-slate-900" />
-                                    </button>
-                                    <button
-                                      onClick={() => void handleToggleComplete(task)}
-                                      className="task-action-icon"
-                                      title="Concluir tarefa"
-                                    >
-                                      <Check className="h-4 w-4 text-emerald-600 hover:text-emerald-800" />
-                                    </button>
-                                    <button
-                                      onClick={() => void handleDeleteTask(task.id)}
-                                      className="task-action-icon"
-                                      title="Excluir"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-red-500" />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <h4 className="task-card-title">{task.title}</h4>
-                                {task.description && (
-                                  <p className="task-card-desc">{task.description}</p>
-                                )}
-
-                                {task.category === 'system_update' && task.due_date && (
-                                  <div className="task-card-due-details">
-                                    <div className="due-date-box">
-                                      <div className="due-date-info">
-                                        <Calendar className="h-3.5 w-3.5 text-slate-500" />
-                                        <span>
-                                          Prazo:{' '}
-                                          {new Date(task.due_date).toLocaleDateString(
-                                            'pt-BR',
-                                            {
-                                              day: '2-digit',
-                                              month: '2-digit',
-                                              year: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit',
-                                            },
-                                          )}
-                                        </span>
-                                      </div>
-                                      {daysInfo && (
-                                        <span
-                                          className={`days-badge ${
-                                            daysInfo.isLate ? 'late' : ''
-                                          }`}
-                                        >
-                                          {daysInfo.text}
-                                        </span>
-                                      )}
+                        <div className="task-list">
+                          {demandTasks.length === 0 ? (
+                            <div className="empty-task-state">
+                              Nenhuma demanda pendente no momento.
+                            </div>
+                          ) : (
+                            demandTasks.map((task) => {
+                              const colorClass = getCardColorClass(task.priority);
+                              return (
+                                <div key={task.id} className={`task-card ${colorClass}`}>
+                                  <div className="task-card-header">
+                                    <span className="task-tag">Demanda</span>
+                                    <div className="task-card-header-actions">
+                                      <button
+                                        onClick={() => handleOpenEditModal(task)}
+                                        className="task-action-icon"
+                                        title="Editar"
+                                      >
+                                        <Pencil className="h-4 w-4 text-slate-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => setTaskToComplete(task)}
+                                        className="task-action-icon"
+                                        title="Concluir"
+                                      >
+                                        <Check className="h-4 w-4 text-emerald-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => void handleDeleteTask(task.id)}
+                                        className="task-action-icon"
+                                        title="Excluir"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </button>
                                     </div>
                                   </div>
-                                )}
 
-                                <div className="task-card-footer">
-                                  <span
-                                    className={`priority-pill ${
-                                      task.priority === 'high'
-                                        ? 'high'
-                                        : task.priority === 'low'
-                                        ? 'low'
-                                        : 'medium'
-                                    }`}
-                                  >
-                                    {task.priority === 'high'
-                                      ? 'Alta prioridade'
-                                      : task.priority === 'low'
-                                      ? 'Baixa prioridade'
-                                      : 'Média prioridade'}
-                                  </span>
-                                  <span className="task-author">
-                                    {task.created_by_name || 'usuario'}
-                                  </span>
+                                  <p className="task-card-desc">{task.description || task.title}</p>
+
+                                  <div className="task-card-footer">
+                                    <span className={`priority-pill ${task.priority || 'medium'}`}>
+                                      {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                                    </span>
+                                    <span className="task-author">
+                                      {task.created_by_name || 'usuario'}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })
-                        )}
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* COLUNA 2: TAREFAS */}
+                      <div className="kanban-column">
+                        <div className="column-banner siguescola">
+                          <div className="column-banner-title">
+                            <GraduationCap className="h-5 w-5" />
+                            <div>
+                              <h3>Tarefas</h3>
+                            </div>
+                          </div>
+                          <div className="column-banner-actions">
+                            <span className="badge-count">{systemTasks.length}</span>
+                            <button onClick={handleOpenCreateModal} className="btn-add-column">
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Adicionar</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="task-list">
+                          {systemTasks.length === 0 ? (
+                            <div className="empty-task-state">
+                              Nenhuma tarefa pendente no momento.
+                            </div>
+                          ) : (
+                            systemTasks.map((task) => {
+                              const colorClass = getCardColorClass(task.priority);
+                              return (
+                                <div key={task.id} className={`task-card ${colorClass}`}>
+                                  <div className="task-card-header">
+                                    <span className="task-tag">Tarefa</span>
+                                    <div className="task-card-header-actions">
+                                      <button
+                                        onClick={() => handleOpenEditModal(task)}
+                                        className="task-action-icon"
+                                        title="Editar"
+                                      >
+                                        <Pencil className="h-4 w-4 text-slate-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => setTaskToComplete(task)}
+                                        className="task-action-icon"
+                                        title="Concluir"
+                                      >
+                                        <Check className="h-4 w-4 text-emerald-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => void handleDeleteTask(task.id)}
+                                        className="task-action-icon"
+                                        title="Excluir"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <p className="task-card-desc">{task.description || task.title}</p>
+
+                                  {task.due_date && (
+                                    <div className="task-card-due-details">
+                                      <div className="due-date-box">
+                                        <div className="due-date-info">
+                                          <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                                          <span>Prazo: {task.due_date.split('T')[0]}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="task-card-footer">
+                                    <span className={`priority-pill ${task.priority || 'medium'}`}>
+                                      {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                                    </span>
+                                    <span className="task-author">
+                                      {task.created_by_name || 'usuario'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </>
+                  )}
+                </>
+              )
             )}
 
-            {/* TAREFAS CONCLUÍDAS */}
+            {/* SEÇÃO DE CONCLUÍDAS */}
             {taskTab === 'completed' && (
               <div className="kanban-column max-w-2xl mx-auto mt-4">
                 <div className="column-banner completed">
                   <div className="column-banner-title">
                     <CheckCircle2 className="h-5 w-5" />
                     <div>
-                      <h3>Tarefas Concluídas</h3>
-                      <p>Histórico de demandas já finalizadas</p>
+                      <h3>Itens Concluídos</h3>
+                      <p>Histórico de tarefas e demandas finalizadas</p>
                     </div>
                   </div>
-                  <span className="badge-count">{completedTasks.length} tarefas</span>
+                  <span className="badge-count">{completedTasks.length}</span>
                 </div>
 
                 <div className="task-list">
                   {completedTasks.length === 0 ? (
                     <div className="empty-task-state">
-                      Nenhuma tarefa concluída no momento.
+                      Nenhum item concluído no momento.
                     </div>
                   ) : (
                     completedTasks.map((task) => (
                       <div key={task.id} className="task-card green opacity-85">
                         <div className="task-card-header">
-                          <span className="task-tag">Concluído</span>
+                          <span className="task-tag">
+                            {task.category === 'demanda' ? 'Demanda' : 'Tarefa'}
+                          </span>
                           <div className="task-card-header-actions">
-                            <button
-                              onClick={() => void handleToggleComplete(task)}
-                              className="task-action-icon"
-                              title="Reabrir tarefa"
-                            >
-                              <RotateCcw className="h-4 w-4 text-blue-600" />
-                            </button>
                             <button
                               onClick={() => void handleDeleteTask(task.id)}
                               className="task-action-icon"
@@ -765,13 +717,17 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 className="task-card-title line-through">{task.title}</h4>
-                        {task.description && (
-                          <p className="task-card-desc">{task.description}</p>
-                        )}
+                        <p className="task-card-desc line-through">
+                          {task.description || task.title}
+                        </p>
 
                         <div className="task-card-footer">
-                          <span className="task-author">Finalizado</span>
+                          <span className="task-author">
+                            Concluído em:{' '}
+                            {task.completed_at
+                              ? task.completed_at.split('T')[0]
+                              : 'Hoje'}
+                          </span>
                           <span className="task-author">
                             {task.created_by_name || 'usuario'}
                           </span>
@@ -786,6 +742,7 @@ export default function App() {
         )}
       </main>
 
+      {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -795,6 +752,65 @@ export default function App() {
         onTaskCreated={fetchTasks}
         taskToEdit={taskToEdit}
       />
+
+      {/* MODAL DE CONCLUSÃO COM SELEÇÃO DE DATA */}
+      {taskToComplete && (
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm">
+            <div className="modal-header">
+              <h3 className="flex items-center gap-2 text-emerald-700">
+                <CheckCircle2 size={20} />
+                <span>Concluir Item</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTaskToComplete(null)}
+                className="btn-close-modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-form py-2">
+              <p className="text-xs text-slate-600 font-medium">
+                Confirme a data de conclusão para finalizar este item:
+              </p>
+
+              <div className="modal-field">
+                <label className="modal-label">Data de Conclusão</label>
+                <input
+                  type="date"
+                  value={completionDate}
+                  onChange={(e) => setCompletionDate(e.target.value)}
+                  className="modal-input"
+                />
+              </div>
+
+              <div className="modal-footer pt-3">
+                <button
+                  type="button"
+                  onClick={() => setTaskToComplete(null)}
+                  className="btn-modal-cancel"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCompletion}
+                  disabled={loadingComplete}
+                  className="btn-modal-submit bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {loadingComplete ? (
+                    <Loader2 className="animate-spin h-4 w-4" />
+                  ) : (
+                    'Salvar'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MeetingTopicModal
         isOpen={isMeetingTopicModalOpen}
