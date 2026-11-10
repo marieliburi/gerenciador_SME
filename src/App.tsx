@@ -383,7 +383,7 @@ export default function App() {
         {activeNav === 'kanban' && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <h2 className="dash-page-title mb-0">Quadro de Tarefas & Demandas</h2>
+              <h2 className="dash-page-title mb-0">Tarefas</h2>
 
               <div className="flex items-center gap-3">
                 <button
