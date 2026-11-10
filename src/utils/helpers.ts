@@ -19,9 +19,9 @@ export function getCardColorClass(color: CardColor | null): string {
 
 export function getCategoryIcon(category: TaskCategory): string {
   switch (category) {
-    case 'user_support':
+    case 'demanda':
       return 'Headphones';
-    case 'system_update':
+    case 'tarefa':
       return 'RefreshCw';
     default:
       return 'FileText';
