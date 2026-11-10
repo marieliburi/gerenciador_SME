@@ -1,5 +1,5 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'waiting' | 'completed';
-export type TaskCategory = 'user_support' | 'system_update';
+export type TaskCategory = 'demanda' | 'tarefa';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type CardColor = 'yellow' | 'blue' | 'green' | 'pink' | 'purple' | 'orange';
 
@@ -49,8 +49,8 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export const CATEGORY_LABELS: Record<TaskCategory, string> = {
-  user_support: 'Atendimento ao usuário',
-  system_update: 'Atualização de sistema',
+  demanda: 'Demanda',
+  tarefa: 'Tarefa',
 };
 
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {

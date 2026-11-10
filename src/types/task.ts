@@ -1,14 +1,16 @@
+// src/types/task.ts
+
 export type TaskStatus = 'todo' | 'in_progress' | 'waiting' | 'completed';
-export type TaskCategory = 'user_support' | 'system_update';
+export type TaskCategory = 'demanda' | 'tarefa'; // <-- Atualizado para os novos valores do sistema
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {
   id: string;
   title: string;
   description?: string | null;
-  category: 'tarefa' | 'demanda';
-  status: 'todo' | 'completed';
-  priority: 'low' | 'medium' | 'high';
+  category: TaskCategory; // <-- Reutiliza o TaskCategory atualizado
+  status: TaskStatus;
+  priority: TaskPriority;
   due_date?: string | null;
   completed_at?: string | null;
   created_by_name?: string;

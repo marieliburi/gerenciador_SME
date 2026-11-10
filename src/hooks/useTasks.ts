@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
-import type { Task, TaskStatus } from '../types/task';
+import type { Task, TaskStatus, TaskPriority } from '../types/task';
 import type { TaskFormData } from '../types';
 import { taskService } from '../services/taskService';
 
@@ -47,13 +47,19 @@ export function useTasks(statuses: TaskStatus[]) {
       savingRef.current.add(tempId);
 
       try {
+        const priorityValue: TaskPriority = formData.priority ?? 'medium';
+
         const newTask = await taskService.createTask({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          priority: priorityValue,
+          card_color: formData.card_color ?? undefined,
           status: 'todo',
         });
 
         if (statuses.includes(newTask.status)) {
-          setTasks((prev) => [newTask, ...prev]);
+          setTasks((prev): Task[] => [newTask, ...prev]);
         }
 
         toast.success('Tarefa criada com sucesso!');
@@ -87,16 +93,16 @@ export function useTasks(statuses: TaskStatus[]) {
           throw new Error('Tarefa não encontrada.');
         }
 
-        setTasks((prev) =>
-          prev.map((task) =>
+        setTasks((prev): Task[] =>
+          prev.map((task): Task =>
             task.id === id ? { ...task, ...formData } : task
           )
         );
 
         const updated = await taskService.updateTask(id, formData);
 
-        setTasks((prev) =>
-          prev.map((task) => (task.id === id ? updated : task))
+        setTasks((prev): Task[] =>
+          prev.map((task): Task => (task.id === id ? updated : task))
         );
 
         toast.success('Tarefa atualizada com sucesso!');
@@ -126,7 +132,7 @@ export function useTasks(statuses: TaskStatus[]) {
       const previousTasks = tasks;
 
       try {
-        setTasks((prev) => prev.filter((task) => task.id !== id));
+        setTasks((prev): Task[] => prev.filter((task) => task.id !== id));
 
         await taskService.deleteTask(id);
 
@@ -174,20 +180,20 @@ export function useTasks(statuses: TaskStatus[]) {
         }
 
         if (!statuses.includes(newStatus)) {
-          setTasks((prev) =>
+          setTasks((prev): Task[] =>
             prev.filter((task) => task.id !== id)
           );
         } else {
-          setTasks((prev) =>
-            prev.map((task) =>
+          setTasks((prev): Task[] =>
+            prev.map((task): Task =>
               task.id === id
                 ? {
-                  ...task,
-                  status: newStatus,
-                  ...(newStatus === 'completed'
-                    ? { completed_at: new Date().toISOString() }
-                    : { completed_at: null }),
-                }
+                    ...task,
+                    status: newStatus,
+                    ...(newStatus === 'completed'
+                      ? { completed_at: new Date().toISOString() }
+                      : { completed_at: null }),
+                  }
                 : task
             )
           );
@@ -225,17 +231,17 @@ export function useTasks(statuses: TaskStatus[]) {
 
         await taskService.completeTask(id);
 
-        setTasks((prev) =>
+        setTasks((prev): Task[] =>
           statuses.includes('completed')
-            ? prev.map((task) =>
-              task.id === id
-                ? {
-                  ...task,
-                  status: 'completed',
-                  completed_at: new Date().toISOString(),
-                }
-                : task
-            )
+            ? prev.map((task): Task =>
+                task.id === id
+                  ? {
+                      ...task,
+                      status: 'completed',
+                      completed_at: new Date().toISOString(),
+                    }
+                  : task
+              )
             : prev.filter((task) => task.id !== id)
         );
 
@@ -273,17 +279,17 @@ export function useTasks(statuses: TaskStatus[]) {
 
         await taskService.reopenTask(id, newStatus);
 
-        setTasks((prev) =>
+        setTasks((prev): Task[] =>
           statuses.includes(newStatus)
-            ? prev.map((task) =>
-              task.id === id
-                ? {
-                  ...task,
-                  status: newStatus,
-                  completed_at: null,
-                }
-                : task
-            )
+            ? prev.map((task): Task =>
+                task.id === id
+                  ? {
+                      ...task,
+                      status: newStatus,
+                      completed_at: null,
+                    }
+                  : task
+              )
             : prev.filter((task) => task.id !== id)
         );
 
