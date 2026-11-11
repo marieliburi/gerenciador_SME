@@ -30,6 +30,7 @@ import {
   LayoutGrid,
   ChevronRight,
   X,
+  RotateCcw,
 } from 'lucide-react';
 
 type NavType = 'home' | 'kanban' | 'meeting_topics' | 'profile';
@@ -171,6 +172,25 @@ export default function App() {
     }
   };
 
+  const handleReopenTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: 'todo',
+          completed_at: null,
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      await fetchTasks();
+    } catch (err) {
+      console.error('Erro ao reabrir tarefa:', err);
+      alert('Não foi possível desfazer a conclusão.');
+    }
+  };
+
   const handleOpenCreateModal = () => {
     setTaskToEdit(null);
     setIsModalOpen(true);
@@ -181,14 +201,12 @@ export default function App() {
     setIsModalOpen(true);
   };
 
-  // Mapeamento de cores dos cards por prioridade
   const getCardColorClass = (priority?: string) => {
     if (priority === 'high') return 'red';
     if (priority === 'medium') return 'orange';
     return 'blue';
   };
 
-  // Ordenação por Prioridade (Alta -> Média -> Baixa)
   const priorityOrder: Record<string, number> = {
     high: 1,
     medium: 2,
@@ -240,7 +258,6 @@ export default function App() {
 
   const totalTasks = tasks.length;
   
-  // Listas filtradas e ordenadas por prioridade
   const demandTasks = sortTasksByPriority(
     tasks.filter((task) => task.category === 'demanda' && task.status !== 'completed')
   );
@@ -414,7 +431,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* MODO NOTAS (QUADRO DE CORTIÇA + POST-ITS ORDENADOS) */}
+            {/* MODO NOTAS */}
             {viewMode === 'notes' ? (
               <div className="postit-board-wrapper">
                 <div className="postit-board-grid">
@@ -450,13 +467,21 @@ export default function App() {
                           >
                             <Pencil size={14} />
                           </button>
-                          {item.status !== 'completed' && (
+                          {item.status !== 'completed' ? (
                             <button
                               onClick={() => setTaskToComplete(item)}
                               className="postit-action-btn check"
                               title="Concluir"
                             >
                               <Check size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void handleReopenTask(item.id)}
+                              className="postit-action-btn"
+                              title="Desfazer conclusão (Reabrir)"
+                            >
+                              <RotateCcw size={14} className="text-blue-600" />
                             </button>
                           )}
                         </div>
@@ -680,9 +705,9 @@ export default function App() {
               )
             )}
 
-            {/* SEÇÃO DE CONCLUÍDAS */}
+            {/* SEÇÃO DE CONCLUÍDAS COM INFORMAÇÕES NO RODAPÉ DO CARTÃO */}
             {taskTab === 'completed' && (
-              <div className="kanban-column max-w-2xl mx-auto mt-4">
+              <div className="kanban-column completed-column">
                 <div className="column-banner completed">
                   <div className="column-banner-title">
                     <CheckCircle2 className="h-5 w-5" />
@@ -700,40 +725,50 @@ export default function App() {
                       Nenhum item concluído no momento.
                     </div>
                   ) : (
-                    completedTasks.map((task) => (
-                      <div key={task.id} className="task-card green opacity-85">
-                        <div className="task-card-header">
-                          <span className="task-tag">
-                            {task.category === 'demanda' ? 'Demanda' : 'Tarefa'}
-                          </span>
-                          <div className="task-card-header-actions">
-                            <button
-                              onClick={() => void handleDeleteTask(task.id)}
-                              className="task-action-icon"
-                              title="Excluir"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </button>
+                    <div className="completed-task-grid">
+                      {completedTasks.map((task) => (
+                        <div key={task.id} className="task-card green opacity-90">
+                          <div className="task-card-header">
+                            <span className="task-tag">
+                              {task.category === 'demanda' ? 'Demanda' : 'Tarefa'}
+                            </span>
+                            <div className="task-card-header-actions">
+                              <button
+                                onClick={() => void handleReopenTask(task.id)}
+                                className="task-action-icon"
+                                title="Desfazer conclusão (Reabrir)"
+                              >
+                                <RotateCcw className="h-4 w-4 text-blue-600" />
+                              </button>
+                              <button
+                                onClick={() => void handleDeleteTask(task.id)}
+                                className="task-action-icon"
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className="task-card-desc completed-text">
+                            {task.description || task.title}
+                          </p>
+
+                          {/* Rodapé com Concluído em e Usuário lado a lado */}
+                          <div className="task-card-footer">
+                            <span className="task-author">
+                              Concluído em:{' '}
+                              {task.completed_at
+                                ? task.completed_at.split('T')[0]
+                                : 'Hoje'}
+                            </span>
+                            <span className="task-author">
+                              {task.created_by_name || 'usuario'}
+                            </span>
                           </div>
                         </div>
-
-                        <p className="task-card-desc line-through">
-                          {task.description || task.title}
-                        </p>
-
-                        <div className="task-card-footer">
-                          <span className="task-author">
-                            Concluído em:{' '}
-                            {task.completed_at
-                              ? task.completed_at.split('T')[0]
-                              : 'Hoje'}
-                          </span>
-                          <span className="task-author">
-                            {task.created_by_name || 'usuario'}
-                          </span>
-                        </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

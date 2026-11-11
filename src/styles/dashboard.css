@@ -1035,3 +1035,66 @@
     grid-template-columns: repeat(1, 1fr);
   }
 }
+
+.kanban-column.completed-column {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 1rem;
+}
+
+/* Grid de concluídas para distribuir os cards de forma ampla */
+.completed-task-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .completed-task-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .completed-task-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Removido o risco (line-through) do texto da tarefa concluída */
+.task-card-desc.completed-text {
+  text-decoration: none !important; /* Sem texto riscado */
+  color: #334155;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   AJUSTES DOS CARDS CONCLUÍDOS (RODAPÉ FIXO NA PARTE INFERIOR)
+   ========================================================================== */
+
+/* Garante que o card ocupe toda a altura disponível e ordene os elementos */
+.kanban-column.completed-column .task-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Empurra o rodapé para a parte inferior */
+  min-height: 140px; /* Garante altura suficiente para o alinhamento */
+}
+
+/* Ajusta o texto da descrição para ocupar o espaço do meio */
+.kanban-column.completed-column .task-card-desc.completed-text {
+  flex-grow: 1;
+  margin-bottom: 0.75rem;
+}
+
+/* Rodapé fixado na parte inferior com borda divisória sutil */
+.kanban-column.completed-column .task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto; /* Garante o alinhamento no fundo */
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(20, 83, 45, 0.15); /* Divisória suave verde */
+  font-size: 0.75rem;
+  color: #166534;
+  font-weight: 600;
+}
